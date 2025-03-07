@@ -453,6 +453,7 @@
                 this.canCatchFish = false;
                 this.collection = {};  // Store caught fish
                 this.records = {};     // Store records
+                this.collisionRadius = 2; // Radius for boat collision
                 this.createBoat();
             }
 
@@ -542,11 +543,39 @@
                 this.group.rotation.y = -Math.PI / 2;
             }
 
+            checkCollision(newPosition) {
+                // Check collision with each island
+                for (const island of islands) {
+                    const dx = newPosition.x - island.position.x;
+                    const dz = newPosition.z - island.position.z;
+                    const distance = Math.sqrt(dx * dx + dz * dz);
+                    
+                    // Get the island's size (assuming it's the first child's scale)
+                    const islandBase = island.children[island.children.length - 1];
+                    const islandRadius = islandBase.geometry.parameters.radius * islandBase.scale.x;
+                    
+                    // Add some padding to the collision radius
+                    const minDistance = islandRadius + this.collisionRadius;
+                    
+                    if (distance < minDistance) {
+                        return true; // Collision detected
+                    }
+                }
+                return false; // No collision
+            }
+
             moveForward() {
                 if (!this.isFishing) {
                     const direction = new THREE.Vector3(0, 0, -1);
                     direction.applyQuaternion(this.group.quaternion);
-                    this.group.position.add(direction.multiplyScalar(this.speed));
+                    
+                    // Calculate new position
+                    const newPosition = this.group.position.clone().add(direction.multiplyScalar(this.speed));
+                    
+                    // Only move if there's no collision
+                    if (!this.checkCollision(newPosition)) {
+                        this.group.position.copy(newPosition);
+                    }
                 }
             }
 
@@ -554,7 +583,14 @@
                 if (!this.isFishing) {
                     const direction = new THREE.Vector3(0, 0, 1);
                     direction.applyQuaternion(this.group.quaternion);
-                    this.group.position.add(direction.multiplyScalar(this.speed));
+                    
+                    // Calculate new position
+                    const newPosition = this.group.position.clone().add(direction.multiplyScalar(this.speed));
+                    
+                    // Only move if there's no collision
+                    if (!this.checkCollision(newPosition)) {
+                        this.group.position.copy(newPosition);
+                    }
                 }
             }
 
@@ -637,17 +673,20 @@
                     caughtFish.weightScale
                 );
 
-                // Update collection
-                if (!this.collection[caughtFish.name]) {
-                    this.collection[caughtFish.name] = {
+                // Update collection with water type tracking
+                const collectionKey = `${caughtFish.name}_${isShallow ? 'shallow' : 'deep'}`;
+                if (!this.collection[collectionKey]) {
+                    this.collection[collectionKey] = {
+                        name: caughtFish.name,
                         count: 0,
                         heaviest: 0,
-                        image: caughtFish.image
+                        image: caughtFish.image,
+                        isShallow: isShallow
                     };
                 }
-                this.collection[caughtFish.name].count++;
-                this.collection[caughtFish.name].heaviest = Math.max(
-                    this.collection[caughtFish.name].heaviest,
+                this.collection[collectionKey].count++;
+                this.collection[collectionKey].heaviest = Math.max(
+                    this.collection[collectionKey].heaviest,
                     weight
                 );
 
@@ -656,7 +695,8 @@
                     this.records.heaviest = {
                         name: caughtFish.name,
                         weight: weight,
-                        image: caughtFish.image
+                        image: caughtFish.image,
+                        isShallow: isShallow
                     };
                 }
 
@@ -685,22 +725,45 @@
                 if (this.records.heaviest) {
                     records.innerHTML = `
                         <p>Heaviest Fish: ${this.records.heaviest.name} (${this.records.heaviest.weight} lbs)</p>
+                        <p>${this.records.heaviest.isShallow ? 'Caught in Shallow Water' : 'Caught in Deep Water'}</p>
                         <img src="${this.records.heaviest.image}" style="width: 100px; height: 100px;">
                     `;
                 }
 
-                // Add all caught fish
-                for (const [fishName, data] of Object.entries(this.collection)) {
+                // Create sections for shallow and deep water catches
+                const shallowSection = document.createElement('div');
+                shallowSection.innerHTML = '<h2 style="color: #00ffff; margin-top: 20px;">Shallow Water Catches</h2>';
+                const shallowGrid = document.createElement('div');
+                shallowGrid.className = 'fish-grid';
+                shallowSection.appendChild(shallowGrid);
+
+                const deepSection = document.createElement('div');
+                deepSection.innerHTML = '<h2 style="color: #0077be; margin-top: 20px;">Deep Water Catches</h2>';
+                const deepGrid = document.createElement('div');
+                deepGrid.className = 'fish-grid';
+                deepSection.appendChild(deepGrid);
+
+                // Sort and add all caught fish
+                for (const [key, data] of Object.entries(this.collection)) {
                     const card = document.createElement('div');
                     card.className = 'fish-card';
                     card.innerHTML = `
-                        <img src="${data.image}" alt="${fishName}">
-                        <h3>${fishName}</h3>
+                        <img src="${data.image}" alt="${data.name}">
+                        <h3>${data.name}</h3>
                         <p>Caught: ${data.count}</p>
                         <p>Heaviest: ${data.heaviest} lbs</p>
                     `;
-                    fishGrid.appendChild(card);
+                    
+                    if (data.isShallow) {
+                        shallowGrid.appendChild(card);
+                    } else {
+                        deepGrid.appendChild(card);
+                    }
                 }
+
+                // Add sections to the grid
+                fishGrid.appendChild(deepSection);
+                fishGrid.appendChild(shallowSection);
 
                 collection.style.display = 'block';
             }
