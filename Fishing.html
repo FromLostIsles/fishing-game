@@ -1,0 +1,854 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Lake and Boat Game</title>
+    <style>
+        body { margin: 0; }
+        canvas { display: block; }
+        #fishCaught {
+            display: none;
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+            font-family: Arial, sans-serif;
+        }
+        #fishCaught img {
+            width: 200px;
+            height: 200px;
+            margin-bottom: 10px;
+        }
+        #fishCaught p {
+            margin: 10px 0;
+            font-size: 18px;
+        }
+        #collection {
+            display: none;
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0, 0, 0, 0.9);
+            color: white;
+            padding: 30px;
+            border-radius: 15px;
+            font-family: Arial, sans-serif;
+            width: 80%;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+        #collection h2 {
+            text-align: center;
+            color: #00ffff;
+            margin-bottom: 20px;
+        }
+        .fish-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+        .fish-card {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 15px;
+            border-radius: 10px;
+            text-align: center;
+        }
+        .fish-card img {
+            width: 100px;
+            height: 100px;
+            margin-bottom: 10px;
+        }
+        .fish-card h3 {
+            margin: 5px 0;
+            color: #00ffff;
+        }
+        .fish-card p {
+            margin: 5px 0;
+            font-size: 14px;
+        }
+        .record {
+            background: rgba(255, 215, 0, 0.1);
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+        }
+        .record h3 {
+            color: gold;
+            margin: 5px 0;
+        }
+        .close-btn {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: none;
+            border: none;
+            color: white;
+            font-size: 24px;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+    <div id="fishCaught">
+        <img id="fishImage" src="" alt="Caught Fish">
+        <p id="fishName"></p>
+        <p>Press SPACE to continue fishing</p>
+    </div>
+    <div id="collection">
+        <button class="close-btn">&times;</button>
+        <h2>Fish Collection</h2>
+        <div class="record">
+            <h3>Records</h3>
+            <div id="records"></div>
+        </div>
+        <div class="fish-grid" id="fishGrid"></div>
+    </div>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+    <script>
+        // Set up scene, camera, and renderer
+        const scene = new THREE.Scene();
+        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+        const renderer = new THREE.WebGLRenderer();
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        document.body.appendChild(renderer.domElement);
+
+        // Add skybox
+        const skyboxLoader = new THREE.CubeTextureLoader();
+        const skyboxMaterials = [
+            new THREE.MeshBasicMaterial({ color: 0x87CEEB, side: THREE.BackSide }), // right - light blue
+            new THREE.MeshBasicMaterial({ color: 0x87CEEB, side: THREE.BackSide }), // left - light blue
+            new THREE.MeshBasicMaterial({ color: 0x87CEEB, side: THREE.BackSide }), // top - light blue
+            new THREE.MeshBasicMaterial({ color: 0x4682B4, side: THREE.BackSide }), // bottom - darker blue
+            new THREE.MeshBasicMaterial({ color: 0x87CEEB, side: THREE.BackSide }), // front - light blue
+            new THREE.MeshBasicMaterial({ color: 0x87CEEB, side: THREE.BackSide })  // back - light blue
+        ];
+
+        const skyboxGeometry = new THREE.BoxGeometry(900, 900, 900);
+        const skybox = new THREE.Mesh(skyboxGeometry, skyboxMaterials);
+        scene.add(skybox);
+        
+        // Remove the old skybox background
+        scene.background = new THREE.Color(0x87CEEB);
+
+        // Add OrbitControls with modified settings
+        const controls = new THREE.OrbitControls(camera, renderer.domElement);
+        controls.enableDamping = true;
+        controls.dampingFactor = 0.05;
+        controls.minDistance = 10;
+        controls.maxDistance = 50;
+        controls.enablePan = false; // Disable panning
+        controls.maxPolarAngle = Math.PI / 2 - 0.1; // Prevent camera from going below horizon
+        controls.minPolarAngle = 0.1; // Prevent camera from going too high
+        controls.rotateSpeed = 0.5; // Adjust rotation speed
+
+        // Variables for camera control
+        let currentCameraDistance = 25; // Store current zoom level
+        let lastBoatPosition = new THREE.Vector3();
+
+        // Add zoom change listener
+        controls.addEventListener('change', () => {
+            // Update stored camera distance when user zooms
+            currentCameraDistance = camera.position.distanceTo(controls.target);
+        });
+
+        // Create lake with water texture
+        const lakeGeometry = new THREE.PlaneGeometry(300, 300, 100, 100);
+        const waterTexture = new THREE.TextureLoader().load('https://threejs.org/examples/textures/water.jpg');
+        waterTexture.wrapS = waterTexture.wrapT = THREE.RepeatWrapping;
+        waterTexture.repeat.set(15, 15);
+        
+        const lakeMaterial = new THREE.MeshPhongMaterial({ 
+            color: 0x0077be,
+            shininess: 60,
+            specular: 0x002233,
+            map: waterTexture,
+            transparent: true,
+            opacity: 0.8,
+            reflectivity: 0.7
+        });
+        const lake = new THREE.Mesh(lakeGeometry, lakeMaterial);
+        lake.rotation.x = -Math.PI / 2;
+        scene.add(lake);
+
+        // Create islands
+        function createIsland(x, z, size, height, complexity) {
+            const island = new THREE.Group();
+            
+            // Create a spherical cap for the island base
+            const segments = complexity * 2;
+            const baseGeometry = new THREE.SphereGeometry(size, segments, segments / 2, 0, Math.PI * 2, 0, Math.PI / 2);
+            const baseMaterial = new THREE.MeshPhongMaterial({ 
+                color: 0xC2B280,
+                flatShading: false
+            });
+            const base = new THREE.Mesh(baseGeometry, baseMaterial);
+            
+            // Scale the geometry to create the desired height
+            base.scale.set(1, height / size, 1);
+            
+            // Add smooth terrain variation
+            const vertices = base.geometry.attributes.position.array;
+            for (let i = 0; i < vertices.length; i += 3) {
+                const x = vertices[i];
+                const y = vertices[i + 1];
+                const z = vertices[i + 2];
+                
+                // Calculate distance from center
+                const distanceFromCenter = Math.sqrt(x * x + z * z);
+                const normalizedDistance = distanceFromCenter / size;
+                
+                // Add subtle height variation using multiple sine waves
+                if (y > 0) {
+                    const variation = 
+                        Math.sin(normalizedDistance * 5) * 0.1 +
+                        Math.sin(normalizedDistance * 8 + x * 0.2) * 0.05 +
+                        Math.sin(normalizedDistance * 6 + z * 0.2) * 0.05;
+                    
+                    vertices[i + 1] += variation;
+                }
+            }
+            base.geometry.attributes.position.needsUpdate = true;
+            base.geometry.computeVertexNormals();
+            
+            // Add vegetation (trees) with better placement
+            const treeCount = Math.floor(size * 1.5);
+            for (let i = 0; i < treeCount; i++) {
+                const treeGeometry = new THREE.ConeGeometry(1.2, 3, 8);  // Doubled size
+                const treeMaterial = new THREE.MeshPhongMaterial({ 
+                    color: 0x2D5A27,
+                    flatShading: false
+                });
+                const tree = new THREE.Mesh(treeGeometry, treeMaterial);
+                
+                // Place trees on the curved surface
+                const angle = Math.random() * Math.PI * 2;
+                const radius = Math.random() * (size * 0.7);
+                const treeX = Math.cos(angle) * radius;
+                const treeZ = Math.sin(angle) * radius;
+                
+                // Calculate Y position based on sphere surface
+                const normalizedRadius = radius / size;
+                const sphereY = Math.sqrt(1 - normalizedRadius * normalizedRadius) * height;
+                
+                tree.position.set(
+                    treeX,
+                    sphereY + 1.5,  // Raised position to account for larger size
+                    treeZ
+                );
+                
+                // Keep trees upright but slightly tilted based on surface
+                const surfaceNormal = new THREE.Vector3(treeX, sphereY, treeZ).normalize();
+                const upVector = new THREE.Vector3(0, 1, 0);
+                const tiltAmount = 0.2; // Reduced tilt amount
+                
+                tree.up.copy(upVector);
+                tree.up.lerp(surfaceNormal, tiltAmount);
+                tree.lookAt(tree.position.clone().add(tree.up));
+                
+                // Random scale variation (but maintaining larger overall size)
+                const scale = 1.2 + Math.random() * 0.4;  // Increased base scale
+                tree.scale.set(scale, scale, scale);
+                
+                // Random rotation around vertical axis only
+                tree.rotateOnAxis(new THREE.Vector3(0, 1, 0), Math.random() * Math.PI * 2);
+                
+                island.add(tree);
+            }
+            
+            island.add(base);
+            island.position.set(x, 0, z);
+            return island;
+        }
+
+        // Add four unique islands with natural archipelago layout
+        const islands = [
+            // Starting island (close to spawn)
+            createIsland(50, 50, 25, 4, 16),    // Moved slightly further out
+            
+            // Medium island to the east
+            createIsland(160, -120, 20, 4, 14),  // Moved further out
+            
+            // Small island to the north
+            createIsland(-100, 160, 15, 3, 12),  // Moved further out
+            
+            // Large island to the west
+            createIsland(-160, -100, 30, 5, 20)  // Moved further out
+        ];
+
+        // Create irregular shallow water zones around islands
+        function createUnderwaterTerrain(x, z, size) {
+            const segments = 64;
+            const points = [];
+            
+            // Create a larger shallow area
+            for (let i = 0; i <= segments; i++) {
+                const angle = (i / segments) * Math.PI * 2;
+                const radius = size * 2.2 * (1 + // Increased from 1.5 to 2.2
+                    Math.sin(angle * 2) * 0.15 + 
+                    Math.cos(angle * 3) * 0.1 + 
+                    Math.sin(angle * 4) * 0.05
+                );
+                points.push(new THREE.Vector2(Math.cos(angle) * radius, Math.sin(angle) * radius));
+            }
+
+            const shapeGeometry = new THREE.ShapeGeometry(new THREE.Shape(points));
+            
+            // Updated material settings for better transparency handling
+            const shallowMaterial = new THREE.MeshPhongMaterial({
+                color: 0xADD8E6,  // Light blue color
+                transparent: true,
+                opacity: 0.3,
+                side: THREE.DoubleSide,
+                shininess: 100,
+                specular: 0x666666,
+                depthWrite: false,
+                depthTest: true,
+                blending: THREE.CustomBlending,
+                blendEquation: THREE.AddEquation,
+                blendSrc: THREE.SrcAlphaFactor,
+                blendDst: THREE.OneMinusSrcAlphaFactor,
+                polygonOffset: true,
+                polygonOffsetFactor: -1,
+                polygonOffsetUnits: -4
+            });
+
+            const shallowWater = new THREE.Mesh(shapeGeometry, shallowMaterial);
+            shallowWater.rotation.x = -Math.PI / 2;
+            shallowWater.position.set(x, 0.3, z);  // Raised higher above the water surface
+            shallowWater.renderOrder = 1;  // Ensure it renders after the main water
+            
+            scene.add(shallowWater);
+        }
+
+        // Add underwater terrain around each island
+        islands.forEach(island => {
+            const pos = island.position;
+            createUnderwaterTerrain(pos.x, pos.z, 35);  // Increased size from 25 to 35
+            scene.add(island);
+        });
+
+        // Add fish types with weight ranges
+        const DEEP_WATER_FISH = [
+            { 
+                name: "Tuna", 
+                image: "https://raw.githubusercontent.com/Aceship/Arknight-Images/main/avg/items/item_fish_4.png", 
+                rarity: 0.3,
+                minWeight: 5,
+                maxWeight: 30,
+                weightScale: 1.8
+            },
+            { 
+                name: "Bass", 
+                image: "https://raw.githubusercontent.com/Aceship/Arknight-Images/main/avg/items/item_fish_2.png", 
+                rarity: 0.25,
+                minWeight: 1,
+                maxWeight: 12,
+                weightScale: 1.8
+            },
+            { 
+                name: "Rainbow Trout", 
+                image: "https://raw.githubusercontent.com/Aceship/Arknight-Images/main/avg/items/item_fish_3.png", 
+                rarity: 0.2,
+                minWeight: 0.5,
+                maxWeight: 8,
+                weightScale: 2.0
+            },
+            { 
+                name: "Legendary Fish", 
+                image: "https://raw.githubusercontent.com/Aceship/Arknight-Images/main/avg/items/item_fish_6.png", 
+                rarity: 0.05,
+                minWeight: 10,
+                maxWeight: 50,
+                weightScale: 2.2
+            }
+        ];
+
+        const SHALLOW_WATER_FISH = [
+            { 
+                name: "Small Carp", 
+                image: "https://raw.githubusercontent.com/Aceship/Arknight-Images/main/avg/items/item_fish_1.png", 
+                rarity: 0.35,
+                minWeight: 0.5,
+                maxWeight: 5,
+                weightScale: 1.5
+            },
+            { 
+                name: "Tropical Fish", 
+                image: "https://raw.githubusercontent.com/Aceship/Arknight-Images/main/avg/items/item_fish_5.png", 
+                rarity: 0.25,
+                minWeight: 0.2,
+                maxWeight: 2,
+                weightScale: 1.8
+            },
+            { 
+                name: "Angelfish", 
+                image: "https://raw.githubusercontent.com/Aceship/Arknight-Images/main/avg/items/item_fish_3.png", 
+                rarity: 0.2,
+                minWeight: 0.1,
+                maxWeight: 1,
+                weightScale: 1.5
+            },
+            { 
+                name: "Coral Fish", 
+                image: "https://raw.githubusercontent.com/Aceship/Arknight-Images/main/avg/items/item_fish_2.png", 
+                rarity: 0.15,
+                minWeight: 0.3,
+                maxWeight: 3,
+                weightScale: 1.8
+            },
+            { 
+                name: "Golden Minnow", 
+                image: "https://raw.githubusercontent.com/Aceship/Arknight-Images/main/avg/items/item_fish_6.png", 
+                rarity: 0.05,
+                minWeight: 0.1,
+                maxWeight: 0.5,
+                weightScale: 2.0
+            }
+        ];
+
+        // Function to check if a point is in shallow water
+        function isInShallowWater(x, z) {
+            for (const island of islands) {
+                const dx = x - island.position.x;
+                const dz = z - island.position.z;
+                const distance = Math.sqrt(dx * dx + dz * dz);
+                const shallowRadius = island.scale.x * 35 * 2.2; // Match the shallow water size calculation
+                if (distance <= shallowRadius) {
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        // Add weight generation function
+        function generateFishWeight(minWeight, maxWeight, scale) {
+            // Generate a random number between 0 and 1
+            const rand = Math.random();
+            
+            // Use exponential distribution to bias towards smaller weights
+            // Math.pow(rand, scale) gives us more small numbers as scale increases
+            const weight = minWeight + (maxWeight - minWeight) * Math.pow(rand, scale);
+            
+            // Round to 1 decimal place
+            return Math.round(weight * 10) / 10;
+        }
+
+        // Create boat class
+        class Boat {
+            constructor() {
+                this.group = new THREE.Group();
+                this.speed = 0.2;
+                this.rotationSpeed = 0.03;
+                this.isFishing = false;
+                this.fishingLine = null;
+                this.fishingRadius = null;
+                this.fishingStartTime = 0;
+                this.canCatchFish = false;
+                this.collection = {};  // Store caught fish
+                this.records = {};     // Store records
+                this.createBoat();
+            }
+
+            createBoat() {
+        // Boat hull
+                const hullGeometry = new THREE.BoxGeometry(2.5, 1.5, 5);
+                const hullMaterial = new THREE.MeshPhongMaterial({ color: 0x800000 });
+        const hull = new THREE.Mesh(hullGeometry, hullMaterial);
+                this.group.add(hull);
+
+                // Boat cabin
+                const cabinGeometry = new THREE.BoxGeometry(2, 1.5, 2);
+                const cabinMaterial = new THREE.MeshPhongMaterial({ color: 0xFFFFFF });
+                const cabin = new THREE.Mesh(cabinGeometry, cabinMaterial);
+                cabin.position.set(0, 1.25, -0.5);
+                this.group.add(cabin);
+
+                // Cabin roof
+                const roofGeometry = new THREE.BoxGeometry(2.2, 0.2, 2.2);
+                const roofMaterial = new THREE.MeshPhongMaterial({ color: 0x2F4F4F });
+                const roof = new THREE.Mesh(roofGeometry, roofMaterial);
+                roof.position.set(0, 2.1, -0.5);
+                this.group.add(roof);
+
+                // Fishing rod holders
+                const poleGeometry = new THREE.CylinderGeometry(0.05, 0.05, 2);
+                const poleMaterial = new THREE.MeshPhongMaterial({ color: 0x8B4513 });
+                const pole = new THREE.Mesh(poleGeometry, poleMaterial);
+                pole.position.set(0.5, 1.5, 1.5);
+                pole.rotation.z = -Math.PI / 6;
+                this.group.add(pole);
+
+                const pole2 = pole.clone();
+                pole2.position.set(-0.5, 1.5, 1.5);
+                pole2.rotation.z = Math.PI / 6;
+                this.group.add(pole2);
+
+                // Front railing
+                const railingGeometry = new THREE.TorusGeometry(1, 0.03, 8, 12, Math.PI);
+                const railingMaterial = new THREE.MeshPhongMaterial({ color: 0xC0C0C0 });
+                const railing = new THREE.Mesh(railingGeometry, railingMaterial);
+                railing.position.set(0, 1.2, 2);
+                railing.rotation.y = Math.PI / 2;
+                this.group.add(railing);
+
+                // Create fishing line (initially hidden)
+                const lineGeometry = new THREE.BufferGeometry();
+                const lineMaterial = new THREE.LineBasicMaterial({ color: 0xFFFFFF });
+                const linePoints = new Float32Array([
+                    0, 1.5, 1.5,  // Start point (at the rod tip)
+                    0, 0, 1.5     // End point (in water)
+                ]);
+                lineGeometry.setAttribute('position', new THREE.BufferAttribute(linePoints, 3));
+                this.fishingLine = new THREE.Line(lineGeometry, lineMaterial);
+                this.fishingLine.visible = false;
+                this.group.add(this.fishingLine);
+
+                // Create fishing radius indicator (initially hidden)
+                const radiusGeometry = new THREE.RingGeometry(3, 3.2, 32);
+                const radiusMaterial = new THREE.MeshBasicMaterial({ 
+                    color: 0x00ffff,
+                    transparent: true,
+                    opacity: 0.5,
+                    side: THREE.DoubleSide
+                });
+                this.fishingRadius = new THREE.Mesh(radiusGeometry, radiusMaterial);
+                this.fishingRadius.rotation.x = -Math.PI / 2; // Lay flat on water
+                this.fishingRadius.position.y = 0.1; // Slightly above water
+                this.fishingRadius.visible = false;
+                this.group.add(this.fishingRadius);
+
+                // Create glow effect for the radius
+                const glowGeometry = new THREE.RingGeometry(2.8, 3.4, 32);
+                const glowMaterial = new THREE.MeshBasicMaterial({
+                    color: 0x00ffff,
+                    transparent: true,
+                    opacity: 0.2,
+                    side: THREE.DoubleSide
+                });
+                this.glowRadius = new THREE.Mesh(glowGeometry, glowMaterial);
+                this.glowRadius.rotation.x = -Math.PI / 2;
+                this.glowRadius.position.y = 0.1;
+                this.glowRadius.visible = false;
+                this.group.add(this.glowRadius);
+
+                this.group.position.y = 1;
+                this.group.rotation.y = -Math.PI / 2;
+            }
+
+            moveForward() {
+                if (!this.isFishing) {
+                    const direction = new THREE.Vector3(0, 0, -1);
+                    direction.applyQuaternion(this.group.quaternion);
+                    this.group.position.add(direction.multiplyScalar(this.speed));
+                }
+            }
+
+            moveBackward() {
+                if (!this.isFishing) {
+                    const direction = new THREE.Vector3(0, 0, 1);
+                    direction.applyQuaternion(this.group.quaternion);
+                    this.group.position.add(direction.multiplyScalar(this.speed));
+                }
+            }
+
+            turnLeft() {
+                if (!this.isFishing) {
+                    this.group.rotation.y += this.rotationSpeed;
+                }
+            }
+
+            turnRight() {
+                if (!this.isFishing) {
+                    this.group.rotation.y -= this.rotationSpeed;
+                }
+            }
+
+            toggleFishing() {
+                this.isFishing = !this.isFishing;
+                this.fishingLine.visible = this.isFishing;
+                this.fishingRadius.visible = this.isFishing;
+                this.glowRadius.visible = this.isFishing;
+                
+                if (this.isFishing) {
+                    this.fishingStartTime = Date.now();
+                    this.canCatchFish = false;
+                    // Increased initial waiting time to 5 seconds
+                    setTimeout(() => {
+                        this.canCatchFish = true;
+                    }, 5000);
+
+                    const linePositions = this.fishingLine.geometry.attributes.position.array;
+                    linePositions[4] = 0;
+                    this.fishingLine.geometry.attributes.position.needsUpdate = true;
+                } else {
+                    document.getElementById('fishCaught').style.display = 'none';
+                }
+            }
+
+            checkForFish() {
+                if (!this.canCatchFish || !this.isFishing) return;
+
+                const timeSpentFishing = (Date.now() - this.fishingStartTime) / 1000; // Convert to seconds
+                const baseProbability = 0.02; // 2% base chance per check (reduced from 10%)
+                const timeBonus = Math.min(0.08, timeSpentFishing * 0.002); // Max 8% bonus, slower increase
+                const catchChance = baseProbability + timeBonus;
+
+                if (Math.random() < catchChance) {
+                    this.catchFish();
+                }
+            }
+
+            catchFish() {
+                // Determine which fish list to use based on location
+                const isShallow = isInShallowWater(this.group.position.x, this.group.position.z);
+                const availableFish = isShallow ? SHALLOW_WATER_FISH : DEEP_WATER_FISH;
+                
+                // Generate a random number between 0 and 1
+                const rand = Math.random();
+                
+                // Calculate total probability to normalize
+                const totalProbability = availableFish.reduce((sum, fish) => sum + fish.rarity, 0);
+                let cumulativeProbability = 0;
+                let caughtFish = null;
+
+                // Normalize probabilities and select fish
+                for (const fish of availableFish) {
+                    cumulativeProbability += fish.rarity / totalProbability;
+                    if (rand <= cumulativeProbability && !caughtFish) {
+                        caughtFish = fish;
+                    }
+                }
+
+                // Fallback to first fish if somehow none was selected
+                if (!caughtFish) {
+                    caughtFish = availableFish[0];
+                }
+
+                const weight = generateFishWeight(
+                    caughtFish.minWeight,
+                    caughtFish.maxWeight,
+                    caughtFish.weightScale
+                );
+
+                // Update collection
+                if (!this.collection[caughtFish.name]) {
+                    this.collection[caughtFish.name] = {
+                        count: 0,
+                        heaviest: 0,
+                        image: caughtFish.image
+                    };
+                }
+                this.collection[caughtFish.name].count++;
+                this.collection[caughtFish.name].heaviest = Math.max(
+                    this.collection[caughtFish.name].heaviest,
+                    weight
+                );
+
+                // Update records
+                if (!this.records.heaviest || weight > this.records.heaviest.weight) {
+                    this.records.heaviest = {
+                        name: caughtFish.name,
+                        weight: weight,
+                        image: caughtFish.image
+                    };
+                }
+
+                // Display the caught fish
+                const fishCaughtDiv = document.getElementById('fishCaught');
+                const fishImage = document.getElementById('fishImage');
+                const fishName = document.getElementById('fishName');
+
+                fishImage.src = caughtFish.image;
+                fishName.textContent = `You caught a ${caughtFish.name}!\nWeight: ${weight} lbs${isShallow ? '\n(Shallow Water Catch!)' : ''}`;
+                fishCaughtDiv.style.display = 'block';
+
+                this.canCatchFish = false;
+            }
+
+            showCollection() {
+                const collection = document.getElementById('collection');
+                const fishGrid = document.getElementById('fishGrid');
+                const records = document.getElementById('records');
+                
+                // Clear previous content
+                fishGrid.innerHTML = '';
+                records.innerHTML = '';
+
+                // Add records
+                if (this.records.heaviest) {
+                    records.innerHTML = `
+                        <p>Heaviest Fish: ${this.records.heaviest.name} (${this.records.heaviest.weight} lbs)</p>
+                        <img src="${this.records.heaviest.image}" style="width: 100px; height: 100px;">
+                    `;
+                }
+
+                // Add all caught fish
+                for (const [fishName, data] of Object.entries(this.collection)) {
+                    const card = document.createElement('div');
+                    card.className = 'fish-card';
+                    card.innerHTML = `
+                        <img src="${data.image}" alt="${fishName}">
+                        <h3>${fishName}</h3>
+                        <p>Caught: ${data.count}</p>
+                        <p>Heaviest: ${data.heaviest} lbs</p>
+                    `;
+                    fishGrid.appendChild(card);
+                }
+
+                collection.style.display = 'block';
+            }
+
+            update(time) {
+                // Bob up and down
+                this.group.position.y = 1 + Math.sin(time) * 0.2;
+
+                // Animate fishing line and check for fish
+                if (this.isFishing) {
+                    const linePositions = this.fishingLine.geometry.attributes.position.array;
+                    linePositions[4] = 0.2 + Math.sin(time * 2) * 0.1;
+                    this.fishingLine.geometry.attributes.position.needsUpdate = true;
+
+                    this.glowRadius.material.opacity = 0.2 + Math.sin(time * 3) * 0.1;
+                    this.fishingRadius.material.opacity = 0.5 + Math.sin(time * 3) * 0.2;
+
+                    // Check for fish every update
+                    this.checkForFish();
+                }
+            }
+        }
+
+        // Create boat instance
+        const boat = new Boat();
+        scene.add(boat.group);
+
+        // Add lighting
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.7);
+        scene.add(ambientLight);
+
+        const directionalLight = new THREE.DirectionalLight(0xffffff, 0.4);
+        directionalLight.position.set(50, 50, 50);
+        scene.add(directionalLight);
+
+        // Add fog for softer atmosphere
+        scene.fog = new THREE.Fog(0x87CEEB, 80, 300);
+
+        // Position camera
+        camera.position.set(20, 20, 20);
+        camera.lookAt(scene.position);
+
+        // Update key controls
+        const keys = {
+            w: false,
+            s: false,
+            a: false,
+            d: false,
+            space: false
+        };
+
+        // Update keyboard controls
+        window.addEventListener('keydown', (e) => {
+            switch(e.key.toLowerCase()) {
+                case 'w': keys.w = true; break;
+                case 's': keys.s = true; break;
+                case 'a': keys.a = true; break;
+                case 'd': keys.d = true; break;
+                case ' ': 
+                    if (!keys.space) {
+                        boat.toggleFishing();
+                    }
+                    keys.space = true;
+                    break;
+            }
+        });
+
+        window.addEventListener('keyup', (e) => {
+            switch(e.key.toLowerCase()) {
+                case 'w': keys.w = false; break;
+                case 's': keys.s = false; break;
+                case 'a': keys.a = false; break;
+                case 'd': keys.d = false; break;
+                case ' ': keys.space = false; break;
+            }
+        });
+
+        // Animation variables
+        let time = 0;
+
+        // Animation loop
+        function animate() {
+            requestAnimationFrame(animate);
+
+            // Handle boat movement
+            if (keys.w) {
+                boat.moveForward();
+            }
+            if (keys.s) {
+                boat.moveBackward();
+            }
+            if (keys.a) {
+                boat.turnLeft();
+            }
+            if (keys.d) {
+                boat.turnRight();
+            }
+
+            // Update boat
+            time += 0.01;
+            boat.update(time);
+
+            // Update camera position while maintaining zoom level
+            const boatPosition = boat.group.position.clone();
+            
+            // Only update camera if boat has moved
+            if (!boatPosition.equals(lastBoatPosition)) {
+                controls.target.copy(boatPosition);
+                
+                // Get current camera direction relative to boat
+                const directionToCamera = camera.position.clone().sub(controls.target).normalize();
+                
+                // Set camera position at the desired distance
+                camera.position.copy(boatPosition.clone().add(directionToCamera.multiplyScalar(currentCameraDistance)));
+                
+                lastBoatPosition.copy(boatPosition);
+            }
+            
+            // Apply damping to camera movement
+            controls.update();
+
+            renderer.render(scene, camera);
+        }
+
+        // Handle window resizing
+        window.addEventListener('resize', onWindowResize, false);
+
+        function onWindowResize() {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        }
+
+        animate();
+
+        // Add event listeners for collection UI
+        document.querySelector('.close-btn').addEventListener('click', () => {
+            document.getElementById('collection').style.display = 'none';
+        });
+
+        // Add Tab key handler for showing collection
+        window.addEventListener('keydown', (e) => {
+            if (e.key === 'Tab') {
+                e.preventDefault(); // Prevent tab from changing focus
+                boat.showCollection();
+            }
+        });
+    </script>
+</body>
+</html>
+
