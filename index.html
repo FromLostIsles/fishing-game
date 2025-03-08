@@ -160,9 +160,6 @@
             transform: translate(-50%, -50%);
             -webkit-tap-highlight-color: transparent;
         }
-        #moveJoystick {
-            /* Removing the overriding top property */
-        }
         .mobileButton {
             position: fixed;
             bottom: 30px;
@@ -373,10 +370,10 @@
         controls.enableZoom = true;
         controls.zoomSpeed = 0.5;
         controls.touches = {
-            ONE: false, // Disable one finger touch
-            TWO: THREE.TOUCH.DOLLY_ROTATE // Enable two finger zoom and rotate
+            ONE: THREE.TOUCH.ROTATE,
+            TWO: THREE.TOUCH.DOLLY_ROTATE
         };
-        
+
         // Don't disable controls on mobile anymore
         // if (isMobile) {
         //     controls.enabled = false;
@@ -1385,82 +1382,23 @@
             // Add touch event listeners for joysticks
             moveJoystickArea.addEventListener('touchstart', (e) => {
                 handleJoystickStart(e, true);
+                e.stopPropagation(); // Prevent camera rotation when touching joystick
             }, { passive: false });
             
             turnJoystickArea.addEventListener('touchstart', (e) => {
                 handleJoystickStart(e, false);
+                e.stopPropagation(); // Prevent camera rotation when touching joystick
             }, { passive: false });
             
             document.addEventListener('touchmove', (e) => {
-                handleJoystickMove(e);
-            }, { passive: false });
-            
-            moveJoystickArea.addEventListener('touchend', (e) => {
-                handleJoystickEnd(e, true);
-            });
-            
-            moveJoystickArea.addEventListener('touchcancel', (e) => {
-                handleJoystickEnd(e, true);
-            });
-            
-            turnJoystickArea.addEventListener('touchend', (e) => {
-                handleJoystickEnd(e, false);
-            });
-            
-            turnJoystickArea.addEventListener('touchcancel', (e) => {
-                handleJoystickEnd(e, false);
-            });
-            
-            // Add global touch end handler for cases where touch ends outside joystick areas
-            document.addEventListener('touchend', (e) => {
-                // Check if any of our active joystick touches have ended
-                if (moveJoystickActive || turnJoystickActive) {
-                    for (let i = 0; i < e.changedTouches.length; i++) {
-                        const touchId = e.changedTouches[i].identifier;
-                        if (touchId === moveJoystickTouchId) {
-                            handleJoystickEnd(e, true);
-                        }
-                        if (touchId === turnJoystickTouchId) {
-                            handleJoystickEnd(e, false);
-                        }
-                    }
-                }
-            });
-            
-            // Clean up on page visibility change (tab switch, etc)
-            document.addEventListener('visibilitychange', () => {
-                if (document.hidden) {
-                    // Reset joysticks when user leaves the page
-                    if (moveJoystickActive) {
-                        moveJoystickActive = false;
-                        moveJoystickTouchId = null;
-                        moveJoystick.style.transform = 'translate(-50%, -50%)';
-                        keys.w = keys.s = false;
-                    }
-                    
-                    if (turnJoystickActive) {
-                        turnJoystickActive = false;
-                        turnJoystickTouchId = null;
-                        turnJoystick.style.transform = 'translate(-50%, -50%)';
-                        keys.a = keys.d = false;
-                    }
-                }
-            });
-            
-            // Prevent default touch behavior only on game controls
-            document.addEventListener('touchmove', (e) => {
-                if (e.target.closest('.joystickArea, .mobileButton')) {
-                    e.preventDefault();
+                // Only handle joystick movement if touch is on a joystick area
+                if (e.target.closest('.joystickArea')) {
+                    handleJoystickMove(e);
+                    e.stopPropagation(); // Prevent camera rotation when using joystick
                 }
             }, { passive: false });
 
-            // Allow zooming on the canvas
-            renderer.domElement.addEventListener('touchmove', (e) => {
-                if (e.touches.length === 2) {
-                    e.stopPropagation();
-                }
-            }, { passive: true });
-
+            // Prevent camera rotation when touching buttons
             fishButton.addEventListener('touchstart', (e) => {
                 e.stopPropagation();
             }, { passive: false });
@@ -1468,34 +1406,21 @@
             collectionButton.addEventListener('touchstart', (e) => {
                 e.stopPropagation();
             }, { passive: false });
-            
-            // Handle button touches with improved feedback
-            function handleButtonTouch(button, action) {
-                let isActive = false;
-                
-                button.addEventListener('touchstart', (e) => {
+
+            // Prevent default touch behavior only on game controls
+            document.addEventListener('touchmove', (e) => {
+                if (e.target.closest('.joystickArea, .mobileButton')) {
                     e.preventDefault();
-                    if (!isActive) {
-                        isActive = true;
-                        button.classList.add('mobile-active');
-                        action();
-                    }
-                }, { passive: false });
+                }
+            }, { passive: false });
 
-                button.addEventListener('touchend', () => {
-                    isActive = false;
-                    button.classList.remove('mobile-active');
-                });
+            // Allow zooming on the canvas with two fingers
+            renderer.domElement.addEventListener('touchmove', (e) => {
+                if (e.touches.length === 2) {
+                    e.stopPropagation();
+                }
+            }, { passive: true });
 
-                button.addEventListener('touchcancel', () => {
-                    isActive = false;
-                    button.classList.remove('mobile-active');
-                });
-            }
-
-            handleButtonTouch(fishButton, () => boat.toggleFishing());
-            handleButtonTouch(collectionButton, toggleCollection);
-            
             // Update fishing popup text for mobile
             const fishingText = document.querySelector('#fishCaught p:last-child');
             fishingText.textContent = 'Tap fishing button to continue';
