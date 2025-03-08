@@ -2,6 +2,7 @@
 <html>
 <head>
     <title>Lake and Boat Game</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <style>
         body { margin: 0; }
         canvas { display: block; }
@@ -129,46 +130,48 @@
         }
         #joystickArea {
             position: fixed;
-            bottom: 20px;
-            left: 20px;
-            width: 120px;
-            height: 120px;
-            background: rgba(255, 255, 255, 0.2);
-            border-radius: 60px;
+            bottom: 30px;
+            left: 30px;
+            width: 150px;
+            height: 150px;
+            background: rgba(255, 255, 255, 0.3);
+            border: 2px solid rgba(255, 255, 255, 0.5);
+            border-radius: 75px;
             touch-action: none;
         }
         #joystick {
             position: absolute;
-            width: 50px;
-            height: 50px;
-            background: rgba(255, 255, 255, 0.5);
-            border-radius: 25px;
-            top: 35px;
-            left: 35px;
+            width: 70px;
+            height: 70px;
+            background: rgba(255, 255, 255, 0.6);
+            border: 2px solid rgba(255, 255, 255, 0.8);
+            border-radius: 35px;
+            top: 40px;
+            left: 40px;
             touch-action: none;
         }
         .mobileButton {
             position: fixed;
-            bottom: 20px;
-            width: 60px;
-            height: 60px;
-            background: rgba(255, 255, 255, 0.3);
-            border: none;
-            border-radius: 30px;
+            bottom: 30px;
+            width: 80px;
+            height: 80px;
+            background: rgba(255, 255, 255, 0.4);
+            border: 2px solid rgba(255, 255, 255, 0.6);
+            border-radius: 40px;
             color: white;
-            font-size: 16px;
+            font-size: 24px;
             display: flex;
             align-items: center;
             justify-content: center;
             touch-action: none;
         }
         #fishButton {
-            right: 100px;
+            right: 120px;
         }
         #collectionButton {
-            right: 20px;
+            right: 30px;
         }
-        @media (max-width: 768px) {
+        @media (max-width: 1024px), (pointer: coarse) {
             #mobileControls {
                 display: block;
             }
@@ -206,9 +209,41 @@
         <button class="mobileButton" id="fishButton">🎣</button>
         <button class="mobileButton" id="collectionButton">📱</button>
     </div>
+    <div id="mobileDebug" style="display: none; position: fixed; top: 10px; right: 10px; background: rgba(0,0,0,0.7); color: white; padding: 10px; border-radius: 5px; font-family: monospace; z-index: 2000;"></div>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
     <script>
+        // Mobile device detection
+        const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || 
+                          window.innerWidth <= 1024 || 
+                          (('ontouchstart' in window) || (navigator.maxTouchPoints > 0));
+        
+        // Debug function for mobile
+        function mobileDebug(message) {
+            if (isMobile) {
+                const debugElement = document.getElementById('mobileDebug');
+                debugElement.style.display = 'block';
+                debugElement.innerHTML += message + '<br>';
+                console.log(message);
+            }
+        }
+        
+        // Show mobile controls if on mobile device
+        if (isMobile) {
+            document.getElementById('mobileControls').style.display = 'block';
+            document.getElementById('instructions').style.display = 'none';
+            mobileDebug('Mobile device detected: ' + navigator.userAgent);
+            
+            // Add viewport meta tag for proper mobile scaling if it doesn't exist
+            if (!document.querySelector('meta[name="viewport"]')) {
+                const viewport = document.createElement('meta');
+                viewport.name = 'viewport';
+                viewport.content = 'width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no';
+                document.getElementsByTagName('head')[0].appendChild(viewport);
+                mobileDebug('Added viewport meta tag');
+            }
+        }
+
         // Set up scene, camera, and renderer
         const scene = new THREE.Scene();
         const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
@@ -244,6 +279,11 @@
         controls.maxPolarAngle = Math.PI / 2 - 0.1; // Prevent camera from going below horizon
         controls.minPolarAngle = 0.1; // Prevent camera from going too high
         controls.rotateSpeed = 0.5; // Adjust rotation speed
+        
+        // Disable OrbitControls on mobile to prevent conflicts with joystick
+        if (isMobile) {
+            controls.enabled = false;
+        }
 
         // Variables for camera control
         let currentCameraDistance = 25; // Store current zoom level
@@ -255,24 +295,63 @@
             currentCameraDistance = camera.position.distanceTo(controls.target);
         });
 
-        // Create lake with water texture
+        // Create lake with reflective water
         const lakeGeometry = new THREE.PlaneGeometry(300, 300, 100, 100);
         const waterTexture = new THREE.TextureLoader().load('https://threejs.org/examples/textures/water.jpg');
         waterTexture.wrapS = waterTexture.wrapT = THREE.RepeatWrapping;
         waterTexture.repeat.set(15, 15);
+
+        // Create normal map for water waves
+        const waterNormalMap = new THREE.TextureLoader().load('https://threejs.org/examples/textures/waternormals.jpg');
+        waterNormalMap.wrapS = waterNormalMap.wrapT = THREE.RepeatWrapping;
+        waterNormalMap.repeat.set(10, 10);
         
-        const lakeMaterial = new THREE.MeshPhongMaterial({ 
+        const lakeMaterial = new THREE.MeshPhysicalMaterial({ 
             color: 0x0077be,
-            shininess: 60,
-            specular: 0x002233,
+            metalness: 0.4,
+            roughness: 0.2,
+            transmission: 0.3,
+            thickness: 0.5,
+            envMapIntensity: 1.0,
+            clearcoat: 0.6,
+            clearcoatRoughness: 0.2,
+            normalMap: waterNormalMap,
+            normalScale: new THREE.Vector2(0.08, 0.08),
             map: waterTexture,
             transparent: true,
-            opacity: 0.8,
-            reflectivity: 0.7
+            opacity: 0.92,
         });
+
         const lake = new THREE.Mesh(lakeGeometry, lakeMaterial);
         lake.rotation.x = -Math.PI / 2;
         scene.add(lake);
+
+        // Create environment map for reflections
+        const cubeRenderTarget = new THREE.WebGLCubeRenderTarget(512, {
+            generateMipmaps: true,
+            minFilter: THREE.LinearMipmapLinearFilter
+        });
+        const cubeCamera = new THREE.CubeCamera(1, 1000, cubeRenderTarget);
+        scene.add(cubeCamera);
+        lakeMaterial.envMap = cubeRenderTarget.texture;
+
+        // Animation function for water
+        function animateWater(time) {
+            // Animate water texture (slower movement)
+            waterTexture.offset.x = time * 0.00002;
+            waterTexture.offset.y = time * 0.00001;
+            
+            // Animate normal map (slower movement)
+            waterNormalMap.offset.x = time * 0.00003;
+            waterNormalMap.offset.y = time * 0.00002;
+
+            // Update environment map with boat position
+            lake.visible = false;
+            const boatPos = boat.group.position;
+            cubeCamera.position.set(boatPos.x, 0.5, boatPos.z); // Lowered camera height for better reflections
+            cubeCamera.update(renderer, scene);
+            lake.visible = true;
+        }
 
         // Create islands
         function createIsland(x, z, size, height, complexity) {
@@ -959,9 +1038,10 @@
                 boat.turnRight();
             }
 
-            // Update boat
+            // Update boat and water
             time += 0.01;
             boat.update(time);
+            animateWater(time * 1000);
 
             // Update camera position while maintaining zoom level
             const boatPosition = boat.group.position.clone();
@@ -1029,9 +1109,10 @@
         const collectionButton = document.getElementById('collectionButton');
 
         function handleJoystickStart(e) {
+            e.preventDefault();
+            joystickActive = true;
             const touch = e.touches[0];
             const rect = joystickArea.getBoundingClientRect();
-            joystickActive = true;
             joystickOrigin.x = rect.left + rect.width / 2;
             joystickOrigin.y = rect.top + rect.height / 2;
             updateJoystickPosition(touch.clientX, touch.clientY);
@@ -1061,34 +1142,57 @@
             
             joystick.style.transform = `translate(calc(${joystickX}px - 50%), calc(${joystickY}px - 50%))`;
             
-            // Update movement keys based on joystick position
-            keys.w = dy < -10;
-            keys.s = dy > 10;
-            keys.a = dx < -10;
-            keys.d = dx > 10;
+            // Update movement keys based on joystick position with more sensitivity
+            keys.w = dy < -5;  // Increased sensitivity
+            keys.s = dy > 5;   // Increased sensitivity
+            keys.a = dx < -5;  // Increased sensitivity
+            keys.d = dx > 5;   // Increased sensitivity
         }
 
-        // Add touch event listeners for joystick
-        joystickArea.addEventListener('touchstart', handleJoystickStart);
-        joystickArea.addEventListener('touchmove', handleJoystickMove);
-        joystickArea.addEventListener('touchend', handleJoystickEnd);
-        joystickArea.addEventListener('touchcancel', handleJoystickEnd);
+        // Initialize mobile controls
+        if (isMobile) {
+            console.log("Mobile device detected, initializing mobile controls");
+            
+            // Add touch event listeners for joystick
+            joystickArea.addEventListener('touchstart', handleJoystickStart, { passive: false });
+            joystickArea.addEventListener('touchmove', handleJoystickMove, { passive: false });
+            joystickArea.addEventListener('touchend', handleJoystickEnd);
+            joystickArea.addEventListener('touchcancel', handleJoystickEnd);
+            
+            // Add touch event listeners for buttons with visual feedback
+            function handleButtonTouch(button, action) {
+                button.addEventListener('touchstart', (e) => {
+                    e.preventDefault();
+                    button.classList.add('mobile-active');
+                    action();
+                }, { passive: false });
 
-        // Add touch event listeners for buttons
-        fishButton.addEventListener('touchstart', (e) => {
-            e.preventDefault();
-            boat.toggleFishing();
-        });
+                button.addEventListener('touchend', () => {
+                    button.classList.remove('mobile-active');
+                });
 
-        // Update collection button to use toggle
-        collectionButton.addEventListener('touchstart', (e) => {
-            e.preventDefault();
-            toggleCollection();
-        });
+                button.addEventListener('touchcancel', () => {
+                    button.classList.remove('mobile-active');
+                });
+            }
 
-        // Prevent default touch behavior to avoid scrolling
+            handleButtonTouch(fishButton, () => boat.toggleFishing());
+            handleButtonTouch(collectionButton, toggleCollection);
+            
+            // Update fishing popup text for mobile
+            const fishingText = document.querySelector('#fishCaught p:last-child');
+            fishingText.textContent = 'Tap fishing button to continue';
+            
+            // Prevent pinch zoom
+            document.addEventListener('gesturestart', (e) => e.preventDefault());
+            document.addEventListener('gesturechange', (e) => e.preventDefault());
+            document.addEventListener('gestureend', (e) => e.preventDefault());
+        }
+
+        // Prevent default touch behavior only on game controls
         document.addEventListener('touchmove', (e) => {
-            if (e.target.closest('#joystickArea, .mobileButton')) {
+            const target = e.target;
+            if (target.closest('#joystickArea, .mobileButton, #collection, #fishCaught')) {
                 e.preventDefault();
             }
         }, { passive: false });
