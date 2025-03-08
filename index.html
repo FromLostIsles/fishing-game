@@ -119,6 +119,63 @@
             margin-right: 5px;
             font-weight: bold;
         }
+        #mobileControls {
+            display: none;
+            position: fixed;
+            bottom: 20px;
+            left: 0;
+            right: 0;
+            z-index: 1000;
+        }
+        #joystickArea {
+            position: fixed;
+            bottom: 20px;
+            left: 20px;
+            width: 120px;
+            height: 120px;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 60px;
+            touch-action: none;
+        }
+        #joystick {
+            position: absolute;
+            width: 50px;
+            height: 50px;
+            background: rgba(255, 255, 255, 0.5);
+            border-radius: 25px;
+            top: 35px;
+            left: 35px;
+            touch-action: none;
+        }
+        .mobileButton {
+            position: fixed;
+            bottom: 20px;
+            width: 60px;
+            height: 60px;
+            background: rgba(255, 255, 255, 0.3);
+            border: none;
+            border-radius: 30px;
+            color: white;
+            font-size: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            touch-action: none;
+        }
+        #fishButton {
+            right: 100px;
+        }
+        #collectionButton {
+            right: 20px;
+        }
+        @media (max-width: 768px) {
+            #mobileControls {
+                display: block;
+            }
+            #instructions {
+                display: none;
+            }
+        }
     </style>
 </head>
 <body>
@@ -141,6 +198,13 @@
         <p><span class="key">W</span><span class="key">A</span><span class="key">S</span><span class="key">D</span> Move boat</p>
         <p><span class="key">SPACE</span> Start/stop fishing</p>
         <p><span class="key">TAB</span> View collection</p>
+    </div>
+    <div id="mobileControls">
+        <div id="joystickArea">
+            <div id="joystick"></div>
+        </div>
+        <button class="mobileButton" id="fishButton">🎣</button>
+        <button class="mobileButton" id="collectionButton">📱</button>
     </div>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
@@ -937,13 +1001,99 @@
             document.getElementById('collection').style.display = 'none';
         });
 
-        // Add Tab key handler for showing collection
+        // Function to toggle collection visibility
+        function toggleCollection() {
+            const collection = document.getElementById('collection');
+            if (collection.style.display === 'block') {
+                collection.style.display = 'none';
+            } else {
+                boat.showCollection();
+            }
+        }
+
+        // Add Tab key handler for toggling collection
         window.addEventListener('keydown', (e) => {
             if (e.key === 'Tab') {
                 e.preventDefault(); // Prevent tab from changing focus
-                boat.showCollection();
+                toggleCollection();
             }
         });
+
+        // Add mobile touch controls
+        let joystickActive = false;
+        let joystickOrigin = { x: 0, y: 0 };
+        let currentJoystickPos = { x: 0, y: 0 };
+        const joystickArea = document.getElementById('joystickArea');
+        const joystick = document.getElementById('joystick');
+        const fishButton = document.getElementById('fishButton');
+        const collectionButton = document.getElementById('collectionButton');
+
+        function handleJoystickStart(e) {
+            const touch = e.touches[0];
+            const rect = joystickArea.getBoundingClientRect();
+            joystickActive = true;
+            joystickOrigin.x = rect.left + rect.width / 2;
+            joystickOrigin.y = rect.top + rect.height / 2;
+            updateJoystickPosition(touch.clientX, touch.clientY);
+        }
+
+        function handleJoystickMove(e) {
+            if (!joystickActive) return;
+            e.preventDefault();
+            const touch = e.touches[0];
+            updateJoystickPosition(touch.clientX, touch.clientY);
+        }
+
+        function handleJoystickEnd() {
+            joystickActive = false;
+            joystick.style.transform = 'translate(-50%, -50%)';
+            keys.w = keys.s = keys.a = keys.d = false;
+        }
+
+        function updateJoystickPosition(x, y) {
+            const dx = x - joystickOrigin.x;
+            const dy = y - joystickOrigin.y;
+            const distance = Math.min(35, Math.sqrt(dx * dx + dy * dy));
+            const angle = Math.atan2(dy, dx);
+            
+            const joystickX = Math.cos(angle) * distance;
+            const joystickY = Math.sin(angle) * distance;
+            
+            joystick.style.transform = `translate(calc(${joystickX}px - 50%), calc(${joystickY}px - 50%))`;
+            
+            // Update movement keys based on joystick position
+            keys.w = dy < -10;
+            keys.s = dy > 10;
+            keys.a = dx < -10;
+            keys.d = dx > 10;
+        }
+
+        // Add touch event listeners for joystick
+        joystickArea.addEventListener('touchstart', handleJoystickStart);
+        joystickArea.addEventListener('touchmove', handleJoystickMove);
+        joystickArea.addEventListener('touchend', handleJoystickEnd);
+        joystickArea.addEventListener('touchcancel', handleJoystickEnd);
+
+        // Add touch event listeners for buttons
+        fishButton.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            boat.toggleFishing();
+        });
+
+        // Update collection button to use toggle
+        collectionButton.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            toggleCollection();
+        });
+
+        // Prevent default touch behavior to avoid scrolling
+        document.addEventListener('touchmove', (e) => {
+            if (e.target.closest('#joystickArea, .mobileButton')) {
+                e.preventDefault();
+            }
+        }, { passive: false });
+
+        animate();
     </script>
 </body>
 </html>
