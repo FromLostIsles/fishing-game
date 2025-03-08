@@ -140,11 +140,13 @@
             touch-action: none;
             -webkit-tap-highlight-color: transparent;
         }
-        #moveJoystickArea {
+        #turnJoystickArea {
             left: 30px;
         }
-        #turnJoystickArea {
-            right: 200px;
+        #moveJoystickArea {
+            right: 30px;
+            height: 200px; /* Taller for vertical movement */
+            border-radius: 75px / 100px; /* Create oval shape */
         }
         .joystick {
             position: absolute;
@@ -159,6 +161,9 @@
             will-change: transform;
             transform: translate(-50%, -50%);
             -webkit-tap-highlight-color: transparent;
+        }
+        #moveJoystick {
+            top: 65px; /* Adjust for taller area */
         }
         .mobileButton {
             position: fixed;
@@ -182,10 +187,12 @@
             background: rgba(255, 255, 255, 0.6);
         }
         #fishButton {
-            right: 120px;
+            left: 50%;
+            transform: translateX(-90px);
         }
         #collectionButton {
-            right: 30px;
+            left: 50%;
+            transform: translateX(10px);
         }
         @media (max-width: 1024px), (pointer: coarse) {
             #mobileControls {
