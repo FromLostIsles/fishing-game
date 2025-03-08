@@ -132,47 +132,45 @@
         .joystickArea {
             position: fixed;
             bottom: 30px;
-            width: 150px;
-            height: 150px;
+            width: 100px;
+            height: 100px;
             background: rgba(255, 255, 255, 0.2);
             border: 2px solid rgba(255, 255, 255, 0.4);
-            border-radius: 75px;
+            border-radius: 50px;
             touch-action: none;
             -webkit-tap-highlight-color: transparent;
         }
         #turnJoystickArea {
-            left: 30px;
+            left: 20px;
         }
         #moveJoystickArea {
-            right: 30px;
-            height: 200px; /* Taller for vertical movement */
-            border-radius: 75px / 100px; /* Create oval shape */
+            right: 20px;
         }
         .joystick {
             position: absolute;
-            width: 70px;
-            height: 70px;
+            width: 46px;
+            height: 46px;
             background: rgba(255, 255, 255, 0.6);
             border: 2px solid rgba(255, 255, 255, 0.8);
-            border-radius: 35px;
-            top: 40px;
-            left: 40px;
+            border-radius: 23px;
+            top: 50%;
+            left: 50%;
             touch-action: none;
             will-change: transform;
             transform: translate(-50%, -50%);
             -webkit-tap-highlight-color: transparent;
         }
         #moveJoystick {
-            top: 65px; /* Adjust for taller area */
+            /* Removing the overriding top property */
         }
         .mobileButton {
             position: fixed;
             bottom: 30px;
-            width: 80px;
-            height: 80px;
+            width: 60px;
+            height: 60px;
             background: rgba(255, 255, 255, 0.4);
             border: 2px solid rgba(255, 255, 255, 0.6);
-            border-radius: 40px;
+            border-radius: 30px;
             color: white;
             font-size: 24px;
             display: flex;
@@ -181,18 +179,17 @@
             touch-action: none;
             transition: transform 0.15s ease-out, background-color 0.15s ease-out;
             -webkit-tap-highlight-color: transparent;
+            transform: none;
+        }
+        #fishButton {
+            left: calc(50% - 40px);
+        }
+        #collectionButton {
+            left: calc(50% + 40px);
         }
         .mobileButton:active, .mobileButton.mobile-active {
             transform: scale(0.9);
             background: rgba(255, 255, 255, 0.6);
-        }
-        #fishButton {
-            left: 50%;
-            transform: translateX(-90px);
-        }
-        #collectionButton {
-            left: 50%;
-            transform: translateX(10px);
         }
         @media (max-width: 1024px), (pointer: coarse) {
             #mobileControls {
@@ -373,11 +370,11 @@
         controls.maxPolarAngle = Math.PI / 2 - 0.1; // Prevent camera from going below horizon
         controls.minPolarAngle = 0.1; // Prevent camera from going too high
         controls.rotateSpeed = 0.5; // Adjust rotation speed
-        controls.enableZoom = true; // Enable zooming on all devices
-        controls.zoomSpeed = 0.5; // Slower zoom for better mobile control
+        controls.enableZoom = true;
+        controls.zoomSpeed = 0.5;
         controls.touches = {
-            ONE: THREE.TOUCH.ROTATE,
-            TWO: THREE.TOUCH.DOLLY
+            ONE: false, // Disable one finger touch
+            TWO: THREE.TOUCH.DOLLY_ROTATE // Enable two finger zoom and rotate
         };
         
         // Don't disable controls on mobile anymore
@@ -721,7 +718,7 @@
             constructor() {
                 this.group = new THREE.Group();
                 this.speed = 0.2;
-                this.rotationSpeed = 0.03;
+                this.rotationSpeed = 0.015;
                 this.isFishing = false;
                 this.fishingLine = null;
                 this.fishingRadius = null;
@@ -1232,12 +1229,17 @@
                     center.x = rect.left + rect.width / 2;
                     center.y = rect.top + rect.height / 2;
                     
-                    // Store the initial touch position
-                    const startPos = isMove ? moveJoystickStartPos : turnJoystickStartPos;
-                    startPos.x = touch.clientX;
-                    startPos.y = touch.clientY;
+                    // Initialize joystick at center position
+                    const joystick = isMove ? moveJoystick : turnJoystick;
+                    joystick.style.transition = '';
+                    joystick.style.transform = 'translate(-50%, -50%)';
                     
-                    updateJoystickPosition(touch.clientX, touch.clientY, isMove);
+                    // Reset movement keys
+                    if (isMove) {
+                        keys.w = keys.s = false;
+                    } else {
+                        keys.a = keys.d = false;
+                    }
                 }
             }
         }
@@ -1303,10 +1305,12 @@
                     keys.w = forward > deadzone;
                     keys.s = forward < -deadzone;
                 } else {
-                    // Left/right turning
+                    // Left/right turning with reduced sensitivity
                     const right = Math.sin(angle - Math.PI/2);
-                    keys.a = right < -deadzone;
-                    keys.d = right > deadzone;
+                    const turnDeadzone = 0.3; // Increased deadzone for turning
+                    const turnIntensity = Math.pow(intensity, 1.5); // Add non-linear scaling for smoother control
+                    keys.a = right < -turnDeadzone && turnIntensity > turnDeadzone;
+                    keys.d = right > turnDeadzone && turnIntensity > turnDeadzone;
                 }
             } else {
                 if (isMove) {
@@ -1322,24 +1326,37 @@
             console.log("Mobile device detected, initializing mobile controls");
             
             // Add touch event listeners for joysticks
-            moveJoystickArea.addEventListener('touchstart', (e) => handleJoystickStart(e, true), { passive: false });
-            turnJoystickArea.addEventListener('touchstart', (e) => handleJoystickStart(e, false), { passive: false });
-            
-            document.addEventListener('touchmove', handleJoystickMove, { passive: false });
-            
-            moveJoystickArea.addEventListener('touchend', () => handleJoystickEnd(true));
-            moveJoystickArea.addEventListener('touchcancel', () => handleJoystickEnd(true));
-            turnJoystickArea.addEventListener('touchend', () => handleJoystickEnd(false));
-            turnJoystickArea.addEventListener('touchcancel', () => handleJoystickEnd(false));
-            
-            // Prevent OrbitControls from interfering with joysticks and buttons
             moveJoystickArea.addEventListener('touchstart', (e) => {
-                e.stopPropagation();
+                if (e.touches.length === 1) {
+                    handleJoystickStart(e, true);
+                }
             }, { passive: false });
             
             turnJoystickArea.addEventListener('touchstart', (e) => {
-                e.stopPropagation();
+                if (e.touches.length === 1) {
+                    handleJoystickStart(e, false);
+                }
             }, { passive: false });
+            
+            document.addEventListener('touchmove', (e) => {
+                if (e.touches.length === 1) {
+                    handleJoystickMove(e);
+                }
+            }, { passive: false });
+            
+            // Prevent default touch behavior only on game controls
+            document.addEventListener('touchmove', (e) => {
+                if (e.target.closest('.joystickArea, .mobileButton')) {
+                    e.preventDefault();
+                }
+            }, { passive: false });
+
+            // Allow zooming on the canvas
+            renderer.domElement.addEventListener('touchmove', (e) => {
+                if (e.touches.length === 2) {
+                    e.stopPropagation();
+                }
+            }, { passive: true });
 
             fishButton.addEventListener('touchstart', (e) => {
                 e.stopPropagation();
@@ -1380,13 +1397,6 @@
             const fishingText = document.querySelector('#fishCaught p:last-child');
             fishingText.textContent = 'Tap fishing button to continue';
         }
-
-        // Prevent default touch behavior only on game controls
-        document.addEventListener('touchmove', (e) => {
-            if (e.target.closest('.joystickArea, .mobileButton, #collection, #fishCaught')) {
-                e.preventDefault();
-            }
-        }, { passive: false });
 
         animate();
     </script>
