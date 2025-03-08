@@ -301,7 +301,6 @@
         <button class="mobileButton" id="fishButton">🎣</button>
         <button class="mobileButton" id="collectionButton">📱</button>
     </div>
-    <div id="mobileDebug" style="display: none; position: fixed; top: 10px; right: 10px; background: rgba(0,0,0,0.7); color: white; padding: 10px; border-radius: 5px; font-family: monospace; z-index: 2000;"></div>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
     <script>
@@ -310,21 +309,10 @@
                           window.innerWidth <= 1024 || 
                           (('ontouchstart' in window) || (navigator.maxTouchPoints > 0));
         
-        // Debug function for mobile
-        function mobileDebug(message) {
-            if (isMobile) {
-                const debugElement = document.getElementById('mobileDebug');
-                debugElement.style.display = 'block';
-                debugElement.innerHTML += message + '<br>';
-                console.log(message);
-            }
-        }
-        
         // Show mobile controls if on mobile device
         if (isMobile) {
             document.getElementById('mobileControls').style.display = 'block';
             document.getElementById('instructions').style.display = 'none';
-            mobileDebug('Mobile device detected: ' + navigator.userAgent);
             
             // Add viewport meta tag for proper mobile scaling if it doesn't exist
             if (!document.querySelector('meta[name="viewport"]')) {
@@ -332,7 +320,6 @@
                 viewport.name = 'viewport';
                 viewport.content = 'width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no';
                 document.getElementsByTagName('head')[0].appendChild(viewport);
-                mobileDebug('Added viewport meta tag');
             }
         }
 
