@@ -129,10 +129,9 @@
             right: 0;
             z-index: 1000;
         }
-        #joystickArea {
+        .joystickArea {
             position: fixed;
             bottom: 30px;
-            left: 30px;
             width: 150px;
             height: 150px;
             background: rgba(255, 255, 255, 0.2);
@@ -141,7 +140,13 @@
             touch-action: none;
             -webkit-tap-highlight-color: transparent;
         }
-        #joystick {
+        #moveJoystickArea {
+            left: 30px;
+        }
+        #turnJoystickArea {
+            right: 200px;
+        }
+        .joystick {
             position: absolute;
             width: 70px;
             height: 70px;
@@ -295,8 +300,11 @@
         <p><span class="key">TAB</span> View collection</p>
     </div>
     <div id="mobileControls">
-        <div id="joystickArea">
-            <div id="joystick"></div>
+        <div id="moveJoystickArea" class="joystickArea">
+            <div id="moveJoystick" class="joystick"></div>
+        </div>
+        <div id="turnJoystickArea" class="joystickArea">
+            <div id="turnJoystick" class="joystick"></div>
         </div>
         <button class="mobileButton" id="fishButton">🎣</button>
         <button class="mobileButton" id="collectionButton">📱</button>
@@ -358,11 +366,17 @@
         controls.maxPolarAngle = Math.PI / 2 - 0.1; // Prevent camera from going below horizon
         controls.minPolarAngle = 0.1; // Prevent camera from going too high
         controls.rotateSpeed = 0.5; // Adjust rotation speed
+        controls.enableZoom = true; // Enable zooming on all devices
+        controls.zoomSpeed = 0.5; // Slower zoom for better mobile control
+        controls.touches = {
+            ONE: THREE.TOUCH.ROTATE,
+            TWO: THREE.TOUCH.DOLLY
+        };
         
-        // Disable OrbitControls on mobile to prevent conflicts with joystick
-        if (isMobile) {
-            controls.enabled = false;
-        }
+        // Don't disable controls on mobile anymore
+        // if (isMobile) {
+        //     controls.enabled = false;
+        // }
 
         // Variables for camera control
         let currentCameraDistance = 25; // Store current zoom level
@@ -1179,87 +1193,120 @@
         });
 
         // Add mobile touch controls
-        let joystickActive = false;
-        let joystickStartPos = { x: 0, y: 0 };
-        let joystickCenter = { x: 0, y: 0 };
-        const joystickArea = document.getElementById('joystickArea');
-        const joystick = document.getElementById('joystick');
+        let moveJoystickActive = false;
+        let turnJoystickActive = false;
+        let moveJoystickStartPos = { x: 0, y: 0 };
+        let turnJoystickStartPos = { x: 0, y: 0 };
+        let moveJoystickCenter = { x: 0, y: 0 };
+        let turnJoystickCenter = { x: 0, y: 0 };
+        const moveJoystickArea = document.getElementById('moveJoystickArea');
+        const turnJoystickArea = document.getElementById('turnJoystickArea');
+        const moveJoystick = document.getElementById('moveJoystick');
+        const turnJoystick = document.getElementById('turnJoystick');
         const fishButton = document.getElementById('fishButton');
         const collectionButton = document.getElementById('collectionButton');
 
-        function handleJoystickStart(e) {
-            e.preventDefault();
-            joystickActive = true;
-            const touch = e.touches[0];
-            const rect = joystickArea.getBoundingClientRect();
-            
-            // Store the joystick's center position
-            joystickCenter.x = rect.left + rect.width / 2;
-            joystickCenter.y = rect.top + rect.height / 2;
-            
-            // Store the initial touch position
-            joystickStartPos.x = touch.clientX;
-            joystickStartPos.y = touch.clientY;
-            
-            updateJoystickPosition(touch.clientX, touch.clientY);
+        function handleJoystickStart(e, isMove) {
+            if (e.touches.length === 1) {
+                e.preventDefault();
+                const joystickActive = isMove ? moveJoystickActive : turnJoystickActive;
+                if (!joystickActive) {
+                    if (isMove) {
+                        moveJoystickActive = true;
+                    } else {
+                        turnJoystickActive = true;
+                    }
+                    
+                    const touch = e.touches[0];
+                    const rect = (isMove ? moveJoystickArea : turnJoystickArea).getBoundingClientRect();
+                    
+                    // Store the joystick's center position
+                    const center = isMove ? moveJoystickCenter : turnJoystickCenter;
+                    center.x = rect.left + rect.width / 2;
+                    center.y = rect.top + rect.height / 2;
+                    
+                    // Store the initial touch position
+                    const startPos = isMove ? moveJoystickStartPos : turnJoystickStartPos;
+                    startPos.x = touch.clientX;
+                    startPos.y = touch.clientY;
+                    
+                    updateJoystickPosition(touch.clientX, touch.clientY, isMove);
+                }
+            }
         }
 
         function handleJoystickMove(e) {
-            if (!joystickActive) return;
             e.preventDefault();
             const touch = e.touches[0];
-            updateJoystickPosition(touch.clientX, touch.clientY);
+            if (moveJoystickActive) {
+                updateJoystickPosition(touch.clientX, touch.clientY, true);
+            }
+            if (turnJoystickActive) {
+                updateJoystickPosition(touch.clientX, touch.clientY, false);
+            }
         }
 
-        function handleJoystickEnd(e) {
-            joystickActive = false;
-            // Reset joystick position with transition
-            joystick.style.transition = 'transform 0.15s ease-out';
-            joystick.style.transform = 'translate(-50%, -50%)';
-            // Reset movement keys
-            keys.w = keys.s = keys.a = keys.d = false;
+        function handleJoystickEnd(isMove) {
+            if (isMove) {
+                moveJoystickActive = false;
+                moveJoystick.style.transition = 'transform 0.15s ease-out';
+                moveJoystick.style.transform = 'translate(-50%, -50%)';
+                keys.w = keys.s = false;
+            } else {
+                turnJoystickActive = false;
+                turnJoystick.style.transition = 'transform 0.15s ease-out';
+                turnJoystick.style.transform = 'translate(-50%, -50%)';
+                keys.a = keys.d = false;
+            }
             
             // Clear transition after it completes
             setTimeout(() => {
-                joystick.style.transition = '';
+                if (isMove) {
+                    moveJoystick.style.transition = '';
+                } else {
+                    turnJoystick.style.transition = '';
+                }
             }, 150);
         }
 
-        function updateJoystickPosition(x, y) {
-            const dx = x - joystickCenter.x;
-            const dy = y - joystickCenter.y;
-            const maxDistance = 50; // Maximum joystick movement radius
+        function updateJoystickPosition(x, y, isMove) {
+            const center = isMove ? moveJoystickCenter : turnJoystickCenter;
+            const joystick = isMove ? moveJoystick : turnJoystick;
+            const dx = x - center.x;
+            const dy = y - center.y;
+            const maxDistance = 50;
             
-            // Calculate distance from center
             const distance = Math.sqrt(dx * dx + dy * dy);
-            
-            // Normalize the distance
             const normalizedDistance = Math.min(distance, maxDistance);
             const angle = Math.atan2(dy, dx);
             
-            // Calculate final joystick position
             const joystickX = Math.cos(angle) * normalizedDistance;
             const joystickY = Math.sin(angle) * normalizedDistance;
             
-            // Remove transition during active movement
             joystick.style.transition = '';
             joystick.style.transform = `translate(calc(${joystickX}px - 50%), calc(${joystickY}px - 50%))`;
             
-            // Calculate movement intensity (0 to 1)
             const intensity = Math.min(distance / maxDistance, 1);
+            const deadzone = 0.2;
             
-            // Update movement keys with analog control
-            const deadzone = 0.2; // Minimum movement threshold
             if (intensity > deadzone) {
-                const forward = -Math.cos(angle - Math.PI/2); // Convert to forward direction
-                const right = Math.sin(angle - Math.PI/2);   // Convert to right direction
-                
-                keys.w = forward > deadzone;
-                keys.s = forward < -deadzone;
-                keys.a = right < -deadzone;
-                keys.d = right > deadzone;
+                if (isMove) {
+                    // Forward/backward movement
+                    const forward = -Math.cos(angle - Math.PI/2);
+                    keys.w = forward > deadzone;
+                    keys.s = forward < -deadzone;
+                } else {
+                    // Left/right turning
+                    const right = Math.sin(angle - Math.PI/2);
+                    keys.a = right < -deadzone;
+                    keys.d = right > deadzone;
+                }
             } else {
-                keys.w = keys.s = keys.a = keys.d = false;
+                if (isMove) {
+                    keys.w = keys.s = false;
+                } else {
+                    keys.a = keys.d = false;
+                }
             }
         }
 
@@ -1267,16 +1314,33 @@
         if (isMobile) {
             console.log("Mobile device detected, initializing mobile controls");
             
-            // Add touch event listeners for joystick with proper cleanup
-            const addJoystickListeners = () => {
-                joystickArea.addEventListener('touchstart', handleJoystickStart, { passive: false });
-                document.addEventListener('touchmove', handleJoystickMove, { passive: false });
-                document.addEventListener('touchend', handleJoystickEnd);
-                document.addEventListener('touchcancel', handleJoystickEnd);
-            };
+            // Add touch event listeners for joysticks
+            moveJoystickArea.addEventListener('touchstart', (e) => handleJoystickStart(e, true), { passive: false });
+            turnJoystickArea.addEventListener('touchstart', (e) => handleJoystickStart(e, false), { passive: false });
             
-            // Initial setup
-            addJoystickListeners();
+            document.addEventListener('touchmove', handleJoystickMove, { passive: false });
+            
+            moveJoystickArea.addEventListener('touchend', () => handleJoystickEnd(true));
+            moveJoystickArea.addEventListener('touchcancel', () => handleJoystickEnd(true));
+            turnJoystickArea.addEventListener('touchend', () => handleJoystickEnd(false));
+            turnJoystickArea.addEventListener('touchcancel', () => handleJoystickEnd(false));
+            
+            // Prevent OrbitControls from interfering with joysticks and buttons
+            moveJoystickArea.addEventListener('touchstart', (e) => {
+                e.stopPropagation();
+            }, { passive: false });
+            
+            turnJoystickArea.addEventListener('touchstart', (e) => {
+                e.stopPropagation();
+            }, { passive: false });
+
+            fishButton.addEventListener('touchstart', (e) => {
+                e.stopPropagation();
+            }, { passive: false });
+
+            collectionButton.addEventListener('touchstart', (e) => {
+                e.stopPropagation();
+            }, { passive: false });
             
             // Handle button touches with improved feedback
             function handleButtonTouch(button, action) {
@@ -1312,7 +1376,7 @@
 
         // Prevent default touch behavior only on game controls
         document.addEventListener('touchmove', (e) => {
-            if (e.target.closest('#joystickArea, .mobileButton, #collection, #fishCaught')) {
+            if (e.target.closest('.joystickArea, .mobileButton, #collection, #fishCaught')) {
                 e.preventDefault();
             }
         }, { passive: false });
