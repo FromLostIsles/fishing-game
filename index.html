@@ -47,6 +47,7 @@
             text-align: center;
             color: #00ffff;
             margin-bottom: 20px;
+            font-size: 24px;
         }
         .fish-grid {
             display: grid;
@@ -134,10 +135,11 @@
             left: 30px;
             width: 150px;
             height: 150px;
-            background: rgba(255, 255, 255, 0.3);
-            border: 2px solid rgba(255, 255, 255, 0.5);
+            background: rgba(255, 255, 255, 0.2);
+            border: 2px solid rgba(255, 255, 255, 0.4);
             border-radius: 75px;
             touch-action: none;
+            -webkit-tap-highlight-color: transparent;
         }
         #joystick {
             position: absolute;
@@ -149,6 +151,9 @@
             top: 40px;
             left: 40px;
             touch-action: none;
+            will-change: transform;
+            transform: translate(-50%, -50%);
+            -webkit-tap-highlight-color: transparent;
         }
         .mobileButton {
             position: fixed;
@@ -164,6 +169,12 @@
             align-items: center;
             justify-content: center;
             touch-action: none;
+            transition: transform 0.15s ease-out, background-color 0.15s ease-out;
+            -webkit-tap-highlight-color: transparent;
+        }
+        .mobileButton:active, .mobileButton.mobile-active {
+            transform: scale(0.9);
+            background: rgba(255, 255, 255, 0.6);
         }
         #fishButton {
             right: 120px;
@@ -174,9 +185,90 @@
         @media (max-width: 1024px), (pointer: coarse) {
             #mobileControls {
                 display: block;
+                touch-action: none;
+                -webkit-touch-callout: none;
+                -webkit-user-select: none;
+                user-select: none;
             }
             #instructions {
                 display: none;
+            }
+            #fishCaught {
+                bottom: 150px;
+                top: auto;
+                transform: translate(-50%, 0);
+            }
+        }
+        @media (max-width: 768px) {
+            #collection {
+                padding: 15px;
+                width: 90%;
+                max-height: 85vh;
+            }
+            #collection h2 {
+                font-size: 20px;
+                margin-bottom: 15px;
+            }
+            .fish-grid {
+                grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+                gap: 10px;
+                margin-bottom: 15px;
+            }
+            .fish-card {
+                padding: 10px;
+            }
+            .fish-card img {
+                width: 70px;
+                height: 70px;
+                margin-bottom: 5px;
+            }
+            .fish-card h3 {
+                font-size: 14px;
+                margin: 3px 0;
+            }
+            .fish-card p {
+                font-size: 12px;
+                margin: 3px 0;
+            }
+            .record {
+                padding: 10px;
+                margin-bottom: 15px;
+            }
+            .record h3 {
+                font-size: 16px;
+            }
+            .record p {
+                font-size: 12px;
+                margin: 3px 0;
+            }
+            .record img {
+                width: 60px;
+                height: 60px;
+            }
+            .close-btn {
+                font-size: 20px;
+                top: 5px;
+                right: 5px;
+            }
+        }
+        @media (max-width: 480px) {
+            #collection {
+                padding: 10px;
+                width: 95%;
+            }
+            .fish-grid {
+                grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+                gap: 8px;
+            }
+            .fish-card img {
+                width: 60px;
+                height: 60px;
+            }
+            .fish-card h3 {
+                font-size: 13px;
+            }
+            .fish-card p {
+                font-size: 11px;
             }
         }
     </style>
@@ -1101,8 +1193,8 @@
 
         // Add mobile touch controls
         let joystickActive = false;
-        let joystickOrigin = { x: 0, y: 0 };
-        let currentJoystickPos = { x: 0, y: 0 };
+        let joystickStartPos = { x: 0, y: 0 };
+        let joystickCenter = { x: 0, y: 0 };
         const joystickArea = document.getElementById('joystickArea');
         const joystick = document.getElementById('joystick');
         const fishButton = document.getElementById('fishButton');
@@ -1113,8 +1205,15 @@
             joystickActive = true;
             const touch = e.touches[0];
             const rect = joystickArea.getBoundingClientRect();
-            joystickOrigin.x = rect.left + rect.width / 2;
-            joystickOrigin.y = rect.top + rect.height / 2;
+            
+            // Store the joystick's center position
+            joystickCenter.x = rect.left + rect.width / 2;
+            joystickCenter.y = rect.top + rect.height / 2;
+            
+            // Store the initial touch position
+            joystickStartPos.x = touch.clientX;
+            joystickStartPos.y = touch.clientY;
+            
             updateJoystickPosition(touch.clientX, touch.clientY);
         }
 
@@ -1125,53 +1224,93 @@
             updateJoystickPosition(touch.clientX, touch.clientY);
         }
 
-        function handleJoystickEnd() {
+        function handleJoystickEnd(e) {
             joystickActive = false;
+            // Reset joystick position with transition
+            joystick.style.transition = 'transform 0.15s ease-out';
             joystick.style.transform = 'translate(-50%, -50%)';
+            // Reset movement keys
             keys.w = keys.s = keys.a = keys.d = false;
+            
+            // Clear transition after it completes
+            setTimeout(() => {
+                joystick.style.transition = '';
+            }, 150);
         }
 
         function updateJoystickPosition(x, y) {
-            const dx = x - joystickOrigin.x;
-            const dy = y - joystickOrigin.y;
-            const distance = Math.min(35, Math.sqrt(dx * dx + dy * dy));
+            const dx = x - joystickCenter.x;
+            const dy = y - joystickCenter.y;
+            const maxDistance = 50; // Maximum joystick movement radius
+            
+            // Calculate distance from center
+            const distance = Math.sqrt(dx * dx + dy * dy);
+            
+            // Normalize the distance
+            const normalizedDistance = Math.min(distance, maxDistance);
             const angle = Math.atan2(dy, dx);
             
-            const joystickX = Math.cos(angle) * distance;
-            const joystickY = Math.sin(angle) * distance;
+            // Calculate final joystick position
+            const joystickX = Math.cos(angle) * normalizedDistance;
+            const joystickY = Math.sin(angle) * normalizedDistance;
             
+            // Remove transition during active movement
+            joystick.style.transition = '';
             joystick.style.transform = `translate(calc(${joystickX}px - 50%), calc(${joystickY}px - 50%))`;
             
-            // Update movement keys based on joystick position with more sensitivity
-            keys.w = dy < -5;  // Increased sensitivity
-            keys.s = dy > 5;   // Increased sensitivity
-            keys.a = dx < -5;  // Increased sensitivity
-            keys.d = dx > 5;   // Increased sensitivity
+            // Calculate movement intensity (0 to 1)
+            const intensity = Math.min(distance / maxDistance, 1);
+            
+            // Update movement keys with analog control
+            const deadzone = 0.2; // Minimum movement threshold
+            if (intensity > deadzone) {
+                const forward = -Math.cos(angle - Math.PI/2); // Convert to forward direction
+                const right = Math.sin(angle - Math.PI/2);   // Convert to right direction
+                
+                keys.w = forward > deadzone;
+                keys.s = forward < -deadzone;
+                keys.a = right < -deadzone;
+                keys.d = right > deadzone;
+            } else {
+                keys.w = keys.s = keys.a = keys.d = false;
+            }
         }
 
         // Initialize mobile controls
         if (isMobile) {
             console.log("Mobile device detected, initializing mobile controls");
             
-            // Add touch event listeners for joystick
-            joystickArea.addEventListener('touchstart', handleJoystickStart, { passive: false });
-            joystickArea.addEventListener('touchmove', handleJoystickMove, { passive: false });
-            joystickArea.addEventListener('touchend', handleJoystickEnd);
-            joystickArea.addEventListener('touchcancel', handleJoystickEnd);
+            // Add touch event listeners for joystick with proper cleanup
+            const addJoystickListeners = () => {
+                joystickArea.addEventListener('touchstart', handleJoystickStart, { passive: false });
+                document.addEventListener('touchmove', handleJoystickMove, { passive: false });
+                document.addEventListener('touchend', handleJoystickEnd);
+                document.addEventListener('touchcancel', handleJoystickEnd);
+            };
             
-            // Add touch event listeners for buttons with visual feedback
+            // Initial setup
+            addJoystickListeners();
+            
+            // Handle button touches with improved feedback
             function handleButtonTouch(button, action) {
+                let isActive = false;
+                
                 button.addEventListener('touchstart', (e) => {
                     e.preventDefault();
-                    button.classList.add('mobile-active');
-                    action();
+                    if (!isActive) {
+                        isActive = true;
+                        button.classList.add('mobile-active');
+                        action();
+                    }
                 }, { passive: false });
 
                 button.addEventListener('touchend', () => {
+                    isActive = false;
                     button.classList.remove('mobile-active');
                 });
 
                 button.addEventListener('touchcancel', () => {
+                    isActive = false;
                     button.classList.remove('mobile-active');
                 });
             }
@@ -1182,17 +1321,11 @@
             // Update fishing popup text for mobile
             const fishingText = document.querySelector('#fishCaught p:last-child');
             fishingText.textContent = 'Tap fishing button to continue';
-            
-            // Prevent pinch zoom
-            document.addEventListener('gesturestart', (e) => e.preventDefault());
-            document.addEventListener('gesturechange', (e) => e.preventDefault());
-            document.addEventListener('gestureend', (e) => e.preventDefault());
         }
 
         // Prevent default touch behavior only on game controls
         document.addEventListener('touchmove', (e) => {
-            const target = e.target;
-            if (target.closest('#joystickArea, .mobileButton, #collection, #fishCaught')) {
+            if (e.target.closest('#joystickArea, .mobileButton, #collection, #fishCaught')) {
                 e.preventDefault();
             }
         }, { passive: false });
