@@ -394,7 +394,7 @@
         const waterTexture = new THREE.TextureLoader().load('https://threejs.org/examples/textures/water.jpg');
         waterTexture.wrapS = waterTexture.wrapT = THREE.RepeatWrapping;
         waterTexture.repeat.set(15, 15);
-
+        
         // Create normal map for water waves
         const waterNormalMap = new THREE.TextureLoader().load('https://threejs.org/examples/textures/waternormals.jpg');
         waterNormalMap.wrapS = waterNormalMap.wrapT = THREE.RepeatWrapping;
@@ -405,7 +405,6 @@
             metalness: 0.4,
             roughness: 0.2,
             transmission: 0.3,
-            thickness: 0.5,
             envMapIntensity: 1.0,
             clearcoat: 0.6,
             clearcoatRoughness: 0.2,
@@ -1208,55 +1207,36 @@
         const collectionButton = document.getElementById('collectionButton');
 
         function handleJoystickStart(e, isMove) {
-            if (e.touches.length >= 1) {
-                e.preventDefault();
+            e.preventDefault();
+            e.stopPropagation();
+            
+            // Get the touch that started in this joystick area
+            const touch = e.changedTouches[0];
+            
+            // Only proceed if we don't already have an active touch for this joystick
+            if (isMove && !moveJoystickActive) {
+                moveJoystickActive = true;
+                moveJoystickTouchId = touch.identifier;
                 
-                // Find the first touch that's not already assigned to another joystick
-                let touchFound = false;
-                let touch;
+                const rect = moveJoystickArea.getBoundingClientRect();
+                moveJoystickCenter.x = rect.left + rect.width / 2;
+                moveJoystickCenter.y = rect.top + rect.height / 2;
                 
-                for (let i = 0; i < e.touches.length; i++) {
-                    touch = e.touches[i];
-                    const touchId = touch.identifier;
-                    
-                    // Skip if this touch is already assigned to the other joystick
-                    if ((isMove && touchId === turnJoystickTouchId) || 
-                        (!isMove && touchId === moveJoystickTouchId)) {
-                        continue;
-                    }
-                    
-                    touchFound = true;
-                    break;
-                }
+                moveJoystick.style.transition = '';
+                moveJoystick.style.transform = 'translate(-50%, -50%)';
+                keys.w = keys.s = false;
                 
-                if (!touchFound) return;
+            } else if (!isMove && !turnJoystickActive) {
+                turnJoystickActive = true;
+                turnJoystickTouchId = touch.identifier;
                 
-                if (isMove) {
-                    moveJoystickActive = true;
-                    moveJoystickTouchId = touch.identifier;
-                } else {
-                    turnJoystickActive = true;
-                    turnJoystickTouchId = touch.identifier;
-                }
+                const rect = turnJoystickArea.getBoundingClientRect();
+                turnJoystickCenter.x = rect.left + rect.width / 2;
+                turnJoystickCenter.y = rect.top + rect.height / 2;
                 
-                const rect = (isMove ? moveJoystickArea : turnJoystickArea).getBoundingClientRect();
-                
-                // Store the joystick's center position
-                const center = isMove ? moveJoystickCenter : turnJoystickCenter;
-                center.x = rect.left + rect.width / 2;
-                center.y = rect.top + rect.height / 2;
-                
-                // Initialize joystick at center position
-                const joystick = isMove ? moveJoystick : turnJoystick;
-                joystick.style.transition = '';
-                joystick.style.transform = 'translate(-50%, -50%)';
-                
-                // Reset relevant movement keys
-                if (isMove) {
-                    keys.w = keys.s = false;
-                } else {
-                    keys.a = keys.d = false;
-                }
+                turnJoystick.style.transition = '';
+                turnJoystick.style.transform = 'translate(-50%, -50%)';
+                keys.a = keys.d = false;
             }
         }
 
@@ -1265,68 +1245,64 @@
         
         function handleJoystickMove(e) {
             e.preventDefault();
+            e.stopPropagation();
             
             // Throttle updates to improve performance (16ms ≈ 60fps)
             const now = performance.now();
             if (now - lastJoystickUpdate < 16) return;
             lastJoystickUpdate = now;
             
-            // Process each touch
-            for (let i = 0; i < e.touches.length; i++) {
-                const touch = e.touches[i];
-                const touchId = touch.identifier;
+            // Process each active touch
+            for (let i = 0; i < e.changedTouches.length; i++) {
+                const touch = e.changedTouches[i];
                 
-                // Check if this touch belongs to the move joystick
-                if (moveJoystickActive && touchId === moveJoystickTouchId) {
+                // Update move joystick if this is its touch
+                if (moveJoystickActive && touch.identifier === moveJoystickTouchId) {
                     updateJoystickPosition(touch.clientX, touch.clientY, true);
                 }
                 
-                // Check if this touch belongs to the turn joystick
-                if (turnJoystickActive && touchId === turnJoystickTouchId) {
+                // Update turn joystick if this is its touch
+                if (turnJoystickActive && touch.identifier === turnJoystickTouchId) {
                     updateJoystickPosition(touch.clientX, touch.clientY, false);
                 }
             }
         }
 
         function handleJoystickEnd(e, isMove) {
-            // For touchend events, we need to check changedTouches, not touches
-            // because the ended touch is no longer in the touches list
-            let touchReleased = false;
+            e.preventDefault();
+            e.stopPropagation();
             
-            // Check if one of our tracked touches has ended
+            // Check each ended touch
             for (let i = 0; i < e.changedTouches.length; i++) {
-                const touchId = e.changedTouches[i].identifier;
+                const touch = e.changedTouches[i];
                 
-                if ((isMove && touchId === moveJoystickTouchId) || 
-                    (!isMove && touchId === turnJoystickTouchId)) {
-                    touchReleased = true;
-                    break;
-                }
-            }
-            
-            // If our tracked touch was released, reset the joystick
-            if (touchReleased) {
-                if (isMove) {
+                // Reset move joystick if its touch ended
+                if (isMove && moveJoystickActive && touch.identifier === moveJoystickTouchId) {
                     moveJoystickActive = false;
                     moveJoystickTouchId = null;
                     moveJoystick.style.transition = 'transform 0.15s ease-out';
                     moveJoystick.style.transform = 'translate(-50%, -50%)';
                     keys.w = keys.s = false;
                     
-                    // Clear transition after it completes
                     setTimeout(() => {
-                        moveJoystick.style.transition = '';
+                        if (!moveJoystickActive) {
+                            moveJoystick.style.transition = '';
+                        }
                     }, 150);
-                } else {
+                }
+                
+                // Reset turn joystick if its touch ended
+                if (!isMove && turnJoystickActive && touch.identifier === turnJoystickTouchId) {
                     turnJoystickActive = false;
                     turnJoystickTouchId = null;
                     turnJoystick.style.transition = 'transform 0.15s ease-out';
                     turnJoystick.style.transform = 'translate(-50%, -50%)';
                     keys.a = keys.d = false;
                     
-                    // Clear transition after it completes
                     setTimeout(() => {
-                        turnJoystick.style.transition = '';
+                        if (!turnJoystickActive) {
+                            turnJoystick.style.transition = '';
+                        }
                     }, 150);
                 }
             }
@@ -1380,33 +1356,57 @@
             console.log("Mobile device detected, initializing mobile controls");
             
             // Add touch event listeners for joysticks
-            moveJoystickArea.addEventListener('touchstart', (e) => {
-                handleJoystickStart(e, true);
-                e.stopPropagation(); // Prevent camera rotation when touching joystick
-            }, { passive: false });
+            moveJoystickArea.addEventListener('touchstart', (e) => handleJoystickStart(e, true), { passive: false });
+            turnJoystickArea.addEventListener('touchstart', (e) => handleJoystickStart(e, false), { passive: false });
             
-            turnJoystickArea.addEventListener('touchstart', (e) => {
-                handleJoystickStart(e, false);
-                e.stopPropagation(); // Prevent camera rotation when touching joystick
-            }, { passive: false });
+            moveJoystickArea.addEventListener('touchmove', handleJoystickMove, { passive: false });
+            turnJoystickArea.addEventListener('touchmove', handleJoystickMove, { passive: false });
             
-            document.addEventListener('touchmove', (e) => {
-                // Only handle joystick movement if touch is on a joystick area
-                if (e.target.closest('.joystickArea')) {
-                    handleJoystickMove(e);
-                    e.stopPropagation(); // Prevent camera rotation when using joystick
-                }
-            }, { passive: false });
+            moveJoystickArea.addEventListener('touchend', (e) => handleJoystickEnd(e, true), { passive: false });
+            moveJoystickArea.addEventListener('touchcancel', (e) => handleJoystickEnd(e, true), { passive: false });
+            
+            turnJoystickArea.addEventListener('touchend', (e) => handleJoystickEnd(e, false), { passive: false });
+            turnJoystickArea.addEventListener('touchcancel', (e) => handleJoystickEnd(e, false), { passive: false });
+            
+            // Handle mobile button touches with improved feedback
+            function handleButtonTouch(button, action) {
+                let isActive = false;
+                
+                button.addEventListener('touchstart', (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    if (!isActive) {
+                        isActive = true;
+                        button.classList.add('mobile-active');
+                        action();
+                    }
+                }, { passive: false });
 
-            // Prevent camera rotation when touching buttons
-            fishButton.addEventListener('touchstart', (e) => {
-                e.stopPropagation();
-            }, { passive: false });
+                button.addEventListener('touchend', (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    isActive = false;
+                    button.classList.remove('mobile-active');
+                });
 
-            collectionButton.addEventListener('touchstart', (e) => {
-                e.stopPropagation();
-            }, { passive: false });
+                button.addEventListener('touchcancel', (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    isActive = false;
+                    button.classList.remove('mobile-active');
+                });
+            }
 
+            // Set up fishing button
+            handleButtonTouch(fishButton, () => {
+                boat.toggleFishing();
+            });
+
+            // Set up collection button
+            handleButtonTouch(collectionButton, () => {
+                toggleCollection();
+            });
+            
             // Prevent default touch behavior only on game controls
             document.addEventListener('touchmove', (e) => {
                 if (e.target.closest('.joystickArea, .mobileButton')) {
