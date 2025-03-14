@@ -736,6 +736,79 @@
             border-radius: 5px;
             z-index: 1000;
         }
+        
+        /* Add after other styles */
+        .quest-item {
+            background: rgba(74, 144, 226, 0.1);
+            border: 1px solid #4a90e2;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 20px;
+        }
+        
+        .quest-item h3 {
+            color: #4a90e2;
+            margin-top: 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+            padding-bottom: 10px;
+        }
+        
+        .quest-description {
+            font-style: italic;
+            color: #ccc;
+            line-height: 1.5;
+            margin-bottom: 15px;
+        }
+        
+        .quest-requirements h4, .quest-reward h4 {
+            color: #ffcc00;
+            margin-bottom: 5px;
+        }
+        
+        .quest-requirements ul {
+            list-style-type: none;
+            padding-left: 10px;
+        }
+        
+        .quest-requirements li {
+            margin-bottom: 5px;
+            display: flex;
+            align-items: center;
+        }
+        
+        .quest-requirements li.completed {
+            color: #4caf50;
+        }
+        
+        .quest-requirements li.missing {
+            color: #ff6b6b;
+        }
+        
+        .quest-button {
+            background: #4a90e2;
+            color: white;
+            border: none;
+            padding: 8px 15px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-top: 10px;
+            font-weight: bold;
+            transition: background 0.3s;
+        }
+        
+        .quest-button:hover {
+            background: #3a7bc8;
+        }
+        
+        .quest-button:disabled {
+            background: #555;
+            cursor: not-allowed;
+        }
+        
+        #questPrompt {
+            font-family: 'Courier New', monospace;
+            font-style: italic;
+        }
     </style>
 </head>
 <body>
@@ -752,7 +825,7 @@
         </div>
         <div class="collection-content" id="fishContent">
         <div class="fish-grid" id="fishGrid"></div>
-        </div>
+    </div>
         <div class="collection-content active" id="inventoryContent">
             <div class="inventory-section">
                 <h2>Fish Inventory</h2>
@@ -810,9 +883,26 @@
     
     <div id="questMenu">
         <button class="close-quest">&times;</button>
-        <h2>Quest Board</h2>
-        <div class="quest-content">
-            <p style="text-align: center; color: #888;">No quests available yet...</p>
+        <h2>Old Fisherman's Quests</h2>
+        <div class="quest-content" id="questContent">
+            <div class="quest-item" id="shallowFishQuest">
+                <h3>Collection: Shallow Water Specimens</h3>
+                <p class="quest-description">"Arr, ye look like a spry young angler! These old bones can't navigate the shallows like they used to. I'm studyin' the local fish, see? Bring me one of each shallow water fish, and I'll reward ye with somethin' special I found years ago!"</p>
+                
+                <div class="quest-requirements">
+                    <h4>Required Fish:</h4>
+                    <ul id="shallowFishList">
+                        <!-- Will be populated dynamically -->
+                    </ul>
+                </div>
+                
+                <div class="quest-reward">
+                    <h4>Reward:</h4>
+                    <p>Ancient Mariner's Compass</p>
+                </div>
+                
+                <button id="completeShallowFishQuest" class="quest-button">Complete Quest</button>
+            </div>
         </div>
     </div>
 
@@ -1656,6 +1746,11 @@
                 this.ownedItems = new Set(); // Track owned items
                 this.baseSpeed = 0.4; // Store base speed for motor calculations
                 this.nearNPC = false; // Add nearNPC property
+                this.completedQuests = new Set();
+                this.questRewards = new Map();
+                
+                // Initialize quest rewards
+                this.questRewards.set('shallowFishQuest', 'compass');
                 this.createBoat();
                 this.createWakeSystem();
             }
@@ -2137,24 +2232,23 @@
                 inventoryGrid.innerHTML = '';
                 fishInventoryGrid.innerHTML = '';
 
-                // Create sections for each water type
-                const shallowSection = document.createElement('div');
-                shallowSection.innerHTML = '<h2 style="color: #00ffff; margin-top: 20px;">Shallow Water Fish</h2>';
-                const shallowGrid = document.createElement('div');
-                shallowGrid.className = 'fish-grid';
-                shallowSection.appendChild(shallowGrid);
-
-                const oceanSection = document.createElement('div');
-                oceanSection.innerHTML = '<h2 style="color: #0077be; margin-top: 20px;">Ocean Fish</h2>';
-                const oceanGrid = document.createElement('div');
-                oceanGrid.className = 'fish-grid';
-                oceanSection.appendChild(oceanGrid);
-
-                const deepSection = document.createElement('div');
-                deepSection.innerHTML = '<h2 style="color: #000066; margin-top: 20px;">Deep Water Fish</h2>';
-                const deepGrid = document.createElement('div');
-                deepGrid.className = 'fish-grid';
-                deepSection.appendChild(deepGrid);
+                // Function to create a fish section for a specific water type
+                const createFishSection = (fishArray, title, color) => {
+                    const section = document.createElement('div');
+                    section.innerHTML = `<h2 style="color: ${color}; margin-top: 20px;">${title}</h2>`;
+                    const grid = document.createElement('div');
+                    grid.className = 'fish-grid';
+                    section.appendChild(grid);
+                    
+                    // Add all fish of this type
+                    fishArray.forEach(fish => {
+                        const key = `${fish.name}_${title.toLowerCase().split(' ')[0]}`;
+                        const data = this.collection[key];
+                        grid.appendChild(createFishCard(fish, data));
+                    });
+                    
+                    fishGrid.appendChild(section);
+                };
 
                 // Function to create a fish card (either populated or blank)
                 const createFishCard = (fish, data) => {
@@ -2163,12 +2257,12 @@
                     
                     if (data) {
                         // Populated card for caught fish
-                    card.innerHTML = `
+                        card.innerHTML = `
                             <img src="${data.image}" alt="${fish.name}">
                             <h3>${fish.name}</h3>
-                        <p>Caught: ${data.count}</p>
-                        <p>Heaviest: ${data.heaviest} lbs</p>
-                    `;
+                            <p>Caught: ${data.count}</p>
+                            <p>Heaviest: ${data.heaviest} lbs</p>
+                        `;
                     } else {
                         // Blank card for uncaught fish
                         card.innerHTML = `
@@ -2180,31 +2274,11 @@
                     return card;
                 };
 
-                // Add all ocean fish
-                OCEAN_FISH.forEach(fish => {
-                    const key = `${fish.name}_ocean`;
-                    const data = this.collection[key];
-                    oceanGrid.appendChild(createFishCard(fish, data));
-                });
-
-                // Add all shallow water fish
-                SHALLOW_WATER_FISH.forEach(fish => {
-                    const key = `${fish.name}_shallow`;
-                    const data = this.collection[key];
-                    shallowGrid.appendChild(createFishCard(fish, data));
-                });
-
-                // Add all deep water fish
-                DEEP_WATER_FISH.forEach(fish => {
-                    const key = `${fish.name}_deep`;
-                    const data = this.collection[key];
-                    deepGrid.appendChild(createFishCard(fish, data));
-                });
-
-                // Add sections to the fish grid
-                fishGrid.appendChild(oceanSection);
-                fishGrid.appendChild(shallowSection);
-                fishGrid.appendChild(deepSection);
+                // Create sections for each water type
+                createFishSection(OCEAN_FISH, "Ocean", "#0077be");
+                createFishSection(SHALLOW_WATER_FISH, "Shallow", "#00ffff");
+                createFishSection(DEEP_WATER_FISH, "Deep", "#000066");
+                createFishSection(GOLDEN_FISH, "Golden", "#FFD700");
 
                 // Add inventory items (equipment)
                 const upgrades = [
@@ -2225,21 +2299,59 @@
                         name: 'Golden Fishing Rod',
                         description: 'Required for fishing in Golden Waters',
                         effect: 'Enables catching legendary golden fish'
+                    },
+                    {
+                        id: 'compass',
+                        name: 'Ancient Mariner\'s Compass',
+                        description: 'A weathered compass from the old fisherman',
+                        effect: 'Helps navigate to distant waters'
                     }
                 ];
 
                 upgrades.forEach(upgrade => {
                     const owned = this.ownedItems.has(upgrade.id);
-                    const item = document.createElement('div');
-                    item.className = `inventory-item ${owned ? 'owned' : ''}`;
-                    item.innerHTML = `
-                        <h3>${upgrade.name}</h3>
-                        <p>${upgrade.description}</p>
-                        ${owned ? `<p style="color: #00ff00;">✓ Owned</p><p>${upgrade.effect}</p>` : 
-                                '<p style="color: #ff0000;">✗ Not Owned</p>'}
-                    `;
-                    inventoryGrid.appendChild(item);
+                    if (owned || upgrade.id === 'compass') { // Always show compass slot
+                        const item = document.createElement('div');
+                        item.className = `inventory-item ${owned ? 'owned' : ''}`;
+                        item.innerHTML = `
+                            <h3>${upgrade.name}</h3>
+                            <p>${upgrade.description}</p>
+                            ${owned ? `<p style="color: #00ff00;">✓ Owned</p><p>${upgrade.effect}</p>` : 
+                                    '<p style="color: #ff0000;">✗ Not Owned</p>'}
+                        `;
+                        inventoryGrid.appendChild(item);
+                    }
                 });
+
+                // Add caught fish to fish inventory section
+                let hasFish = false;
+                for (const [key, data] of Object.entries(this.collection)) {
+                    if (data.count > 0) {
+                        hasFish = true;
+                        const waterTypeName = data.waterType === "shallow" ? "Shallow Water" : 
+                                            data.waterType === "deep" ? "Deep Water" : 
+                                            data.waterType === "golden" ? "Golden Waters" : "Ocean";
+                        
+                        const fishItem = document.createElement('div');
+                        fishItem.className = 'inventory-item fish';
+                        fishItem.innerHTML = `
+                            <img src="${data.image}" alt="${data.name}" style="width: 50px; height: 50px; object-fit: contain;">
+                            <h3>${data.name}</h3>
+                            <p>${waterTypeName}</p>
+                            <p>Quantity: ${data.count}</p>
+                            <p>Heaviest: ${data.heaviest} lbs</p>
+                        `;
+                        fishInventoryGrid.appendChild(fishItem);
+                    }
+                }
+
+                if (!hasFish) {
+                    const emptyMessage = document.createElement('p');
+                    emptyMessage.textContent = "You haven't caught any fish yet. Go fishing!";
+                    emptyMessage.style.textAlign = "center";
+                    emptyMessage.style.gridColumn = "1 / -1";
+                    fishInventoryGrid.appendChild(emptyMessage);
+                }
 
                 collection.style.display = 'block';
             }
@@ -2682,6 +2794,114 @@
 
             showQuestMenu() {
                 document.getElementById('questMenu').style.display = 'block';
+                this.updateQuestStatus(); // Update quest status when opening menu
+            }
+
+            // Add to the Boat class
+            completeShallowFishQuest() {
+                if (this.completedQuests.has('shallowFishQuest')) {
+                    return;
+                }
+                
+                // Check if all shallow water fish are caught
+                const allShallowFish = SHALLOW_WATER_FISH.map(fish => fish.name);
+                const allCaught = allShallowFish.every(fishName => {
+                    const key = `${fishName}_shallow`;
+                    return this.collection[key] && this.collection[key].count > 0;
+                });
+                
+                if (!allCaught) {
+                    // Show message if not all fish are caught
+                    const fishCaughtDiv = document.getElementById('fishCaught');
+                    const fishImage = document.getElementById('fishImage');
+                    const fishName = document.getElementById('fishName');
+                    
+                    fishImage.src = '';
+                    fishName.textContent = "\"Ye haven't caught all the shallow water fish yet, matey! I need one of each: Small Carp, Tropical Fish, Angelfish, Coral Fish, and Golden Minnow. Keep fishin'!\"";
+                    fishCaughtDiv.style.display = 'block';
+                    return;
+                }
+                
+                // Mark quest as completed
+                this.completedQuests.add('shallowFishQuest');
+                
+                // Add reward to inventory
+                this.ownedItems.add('compass');
+                
+                // Remove the fish from inventory
+                allShallowFish.forEach(fishName => {
+                    const key = `${fishName}_shallow`;
+                    if (this.collection[key]) {
+                        // Keep track of how many fish were given to the fisherman
+                        const fishGiven = this.collection[key].count;
+                        
+                        // Remove fish from inventory
+                        this.collection[key].count = 0;
+                        this.collection[key].weights = [];
+                        
+                        console.log(`Gave ${fishGiven} ${fishName}(s) to the Old Fisherman`);
+                    }
+                });
+                
+                // Update UI
+                this.updateQuestStatus();
+                
+                // Show completion message
+                const fishCaughtDiv = document.getElementById('fishCaught');
+                const fishImage = document.getElementById('fishImage');
+                const fishName = document.getElementById('fishName');
+                
+                fishImage.src = '';
+                fishName.textContent = "\"Arr, ye did it! These specimens are perfect for me research! I'll take those fish off yer hands now. Here's that ancient compass I promised ye. Found it years ago while sailin' the golden waters... it'll help ye navigate to treasures unknown!\"";
+                fishCaughtDiv.style.display = 'block';
+                
+                // Update quest button
+                const completeButton = document.getElementById('completeShallowFishQuest');
+                completeButton.textContent = 'Completed';
+                completeButton.disabled = true;
+            }
+
+            updateQuestStatus() {
+                // Update shallow fish quest status
+                const shallowFishList = document.getElementById('shallowFishList');
+                if (!shallowFishList) return; // Guard clause in case element doesn't exist yet
+                
+                shallowFishList.innerHTML = '';
+                
+                // Get all shallow water fish
+                const allShallowFish = SHALLOW_WATER_FISH.map(fish => fish.name);
+                
+                // Check which ones the player has caught
+                let allCaught = true;
+                
+                allShallowFish.forEach(fishName => {
+                    const li = document.createElement('li');
+                    
+                    // Check if this fish is in the collection
+                    const key = `${fishName}_shallow`;
+                    const hasFish = this.collection[key] && this.collection[key].count > 0;
+                    
+                    if (hasFish) {
+                        li.textContent = `${fishName} - Caught (${this.collection[key].count})`;
+                        li.className = 'completed';
+                    } else {
+                        li.textContent = `${fishName} - Not caught yet`;
+                        li.className = 'missing';
+                        allCaught = false;
+                    }
+                    
+                    shallowFishList.appendChild(li);
+                });
+                
+                // Enable/disable complete button
+                const completeButton = document.getElementById('completeShallowFishQuest');
+                if (completeButton) {
+                    completeButton.disabled = !allCaught || this.completedQuests.has('shallowFishQuest');
+                    
+                    if (this.completedQuests.has('shallowFishQuest')) {
+                        completeButton.textContent = 'Completed';
+                    }
+                }
             }
         }
 
@@ -3184,6 +3404,11 @@
         // Add quest menu close functionality after other event listeners
         document.querySelector('.close-quest').addEventListener('click', () => {
             document.getElementById('questMenu').style.display = 'none';
+        });
+
+        // Add event listener for quest completion after other event listeners
+        document.getElementById('completeShallowFishQuest').addEventListener('click', () => {
+            boat.completeShallowFishQuest();
         });
     </script>
 </body>
