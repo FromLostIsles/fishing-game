@@ -3,813 +3,7 @@
 <head>
     <title>Fishing Game</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <style>
-        body { margin: 0; }
-        canvas { display: block; }
-        #fishCaught {
-            display: none;
-            position: fixed;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            background: rgba(0, 0, 0, 0.8);
-            color: white;
-            padding: 20px;
-            border-radius: 10px;
-            text-align: center;
-            font-family: Arial, sans-serif;
-        }
-        #fishCaught img {
-            width: 150px;
-            height: auto;
-            margin-bottom: 10px;
-        }
-        #fishCaught p {
-            margin: 10px 0;
-            font-size: 18px;
-        }
-        #collection {
-            display: none;
-            position: fixed;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            background: rgba(0, 0, 0, 0.9);
-            color: white;
-            padding: 30px;
-            border-radius: 15px;
-            font-family: Arial, sans-serif;
-            width: 80%;
-            max-height: 80vh;
-            overflow-y: auto;
-        }
-        #fishShop {
-            display: none;
-            position: fixed;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            background: rgba(0, 0, 0, 0.9);
-            color: white;
-            padding: 30px;
-            border-radius: 15px;
-            font-family: Arial, sans-serif;
-            width: 80%;
-            max-height: 80vh;
-            overflow-y: auto;
-        }
-        #fishShop h2 {
-            text-align: center;
-            color: #ffd700;
-            margin-bottom: 20px;
-            font-size: 24px;
-        }
-        .shop-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 20px;
-            padding-bottom: 10px;
-            border-bottom: 1px solid #666;
-        }
-        .shop-money {
-            color: #ffd700;
-            font-size: 22px;
-            font-weight: bold;
-        }
-        .shop-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-            gap: 20px;
-            margin-bottom: 20px;
-        }
-        .shop-item {
-            background: rgba(255, 255, 255, 0.1);
-            padding: 15px;
-            border-radius: 10px;
-            text-align: center;
-            position: relative;
-        }
-        .shop-item:hover {
-            background: rgba(255, 255, 255, 0.2);
-            cursor: pointer;
-        }
-        .shop-item img {
-            width: 100px;
-            height: auto;
-            margin-bottom: 10px;
-        }
-        .shop-item h3 {
-            margin: 5px 0;
-            color: #ffffff;
-        }
-        .shop-item p {
-            margin: 5px 0;
-            font-size: 14px;
-        }
-        .shop-item .price {
-            color: #ffd700;
-            font-weight: bold;
-            font-size: 16px;
-        }
-        .shop-item .count {
-            position: absolute;
-            top: 5px;
-            right: 5px;
-            background: rgba(0, 0, 0, 0.7);
-            color: white;
-            border-radius: 50%;
-            width: 24px;
-            height: 24px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 14px;
-        }
-        .shop-controls {
-            display: flex;
-            justify-content: space-between;
-            margin-top: 20px;
-        }
-        .shop-button {
-            background: #4a6d8c;
-            color: white;
-            border: none;
-            padding: 10px 20px;
-            border-radius: 5px;
-            cursor: pointer;
-            font-size: 16px;
-        }
-        .shop-button:hover {
-            background: #5d8baf;
-        }
-        #moneyDisplay {
-            position: fixed;
-            top: 20px;
-            right: 20px;
-            background: rgba(0, 0, 0, 0.7);
-            color: #ffd700;
-            padding: 10px 15px;
-            border-radius: 10px;
-            font-family: Arial, sans-serif;
-            font-weight: bold;
-            z-index: 1000;
-        }
-        .shop-notification {
-            color: #00ff00;
-            font-size: 16px;
-            text-align: center;
-            margin-top: 15px;
-            min-height: 20px;
-        }
-        #collection h2 {
-            text-align: center;
-            color: #00ffff;
-            margin-bottom: 20px;
-            font-size: 24px;
-        }
-        .fish-grid {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 20px;
-            margin-bottom: 20px;
-            justify-content: flex-start;
-            padding: 10px 0;
-        }
-        
-        .fish-card {
-            background: rgba(255, 255, 255, 0.1);
-            padding: 15px;
-            border-radius: 10px;
-            text-align: center;
-            width: calc(25% - 20px); /* 4 cards per row with gap */
-            min-width: 180px;
-            margin-bottom: 15px;
-        }
-
-        @media (max-width: 992px) {
-            .fish-card {
-                width: calc(33.33% - 20px); /* 3 cards per row on medium screens */
-            }
-        }
-
-        @media (max-width: 768px) {
-            .fish-card {
-                width: calc(50% - 20px); /* 2 cards per row on small screens */
-            }
-        }
-
-        @media (max-width: 480px) {
-            .fish-card {
-                width: 100%; /* 1 card per row on very small screens */
-            }
-        }
-
-        /* Add custom scrollbar styling */
-        .fish-grid::-webkit-scrollbar {
-            height: 8px;
-        }
-        
-        .fish-grid::-webkit-scrollbar-track {
-            background: rgba(255, 255, 255, 0.1);
-            border-radius: 4px;
-        }
-        
-        .fish-grid::-webkit-scrollbar-thumb {
-            background: rgba(255, 255, 255, 0.3);
-            border-radius: 4px;
-        }
-        
-        .fish-grid::-webkit-scrollbar-thumb:hover {
-            background: rgba(255, 255, 255, 0.4);
-        }
-
-        @media (max-width: 768px) {
-            .fish-grid {
-                gap: 10px;
-            }
-            
-            .fish-card {
-                min-width: 140px;
-                padding: 10px;
-            }
-        }
-
-        @media (max-width: 480px) {
-            .fish-card {
-                min-width: 120px;
-            }
-        }
-        .fish-card img {
-            width: 150px;
-            height: auto;
-            margin-bottom: 10px;
-        }
-        .fish-card h3 {
-            margin: 5px 0;
-            color: #00ffff;
-        }
-        .fish-card p {
-            margin: 5px 0;
-            font-size: 14px;
-        }
-        .record {
-            background: rgba(255, 215, 0, 0.1);
-            padding: 15px;
-            border-radius: 10px;
-            margin-bottom: 20px;
-        }
-        .record h3 {
-            color: gold;
-            margin: 5px 0;
-        }
-        .close-btn {
-            position: absolute;
-            top: 10px;
-            right: 10px;
-            background: none;
-            border: none;
-            color: white;
-            font-size: 24px;
-            cursor: pointer;
-        }
-        #instructions {
-            position: fixed;
-            top: 20px;
-            left: 20px;
-            background: rgba(0, 0, 0, 0.7);
-            color: white;
-            padding: 15px;
-            border-radius: 10px;
-            font-family: Arial, sans-serif;
-            z-index: 1000;
-        }
-        #instructions h3 {
-            margin: 0 0 10px 0;
-            color: #00ffff;
-        }
-        #instructions p {
-            margin: 5px 0;
-            font-size: 14px;
-        }
-        #instructions .key {
-            display: inline-block;
-            background: rgba(255, 255, 255, 0.2);
-            padding: 2px 6px;
-            border-radius: 4px;
-            margin-right: 5px;
-            font-weight: bold;
-        }
-        #mobileControls {
-            display: none;
-            position: fixed;
-            bottom: 20px;
-            left: 0;
-            right: 0;
-            z-index: 1000;
-        }
-        .joystickArea {
-            position: fixed;
-            bottom: 30px;
-            width: 100px;
-            height: 100px;
-            background: rgba(255, 255, 255, 0.2);
-            border: 2px solid rgba(255, 255, 255, 0.4);
-            border-radius: 50px;
-            touch-action: none;
-            -webkit-tap-highlight-color: transparent;
-        }
-        #turnJoystickArea {
-            left: 20px;
-        }
-        #moveJoystickArea {
-            right: 20px;
-        }
-        .joystick {
-            position: absolute;
-            width: 46px;
-            height: 46px;
-            background: rgba(255, 255, 255, 0.6);
-            border: 2px solid rgba(255, 255, 255, 0.8);
-            border-radius: 23px;
-            top: 50%;
-            left: 50%;
-            touch-action: none;
-            will-change: transform;
-            transform: translate(-50%, -50%);
-            -webkit-tap-highlight-color: transparent;
-        }
-        .mobileButton {
-            position: relative;
-            width: 60px;
-            height: 60px;
-            background: rgba(255, 255, 255, 0.4);
-            border: 2px solid rgba(255, 255, 255, 0.6);
-            border-radius: 30px;
-            color: white;
-            font-size: 24px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            touch-action: none;
-            transition: transform 0.15s ease-out, background-color 0.15s ease-out;
-            -webkit-tap-highlight-color: transparent;
-            margin: 0;
-            padding: 0;
-        }
-        /* Remove individual button positioning */
-        #fishButton, #collectionButton {
-            left: auto;
-        }
-        .mobileButton:active, .mobileButton.mobile-active {
-            transform: scale(0.9);
-            background: rgba(255, 255, 255, 0.6);
-        }
-        @media (max-width: 1024px), (pointer: coarse) {
-            #mobileControls {
-                display: block;
-                touch-action: none;
-                -webkit-touch-callout: none;
-                -webkit-user-select: none;
-                user-select: none;
-            }
-            #instructions {
-                display: none;
-            }
-            #fishCaught {
-                bottom: 150px;
-                top: auto;
-                transform: translate(-50%, 0);
-            }
-        }
-        @media (max-width: 768px) {
-            #collection {
-                padding: 15px;
-                width: 90%;
-                max-height: 85vh;
-            }
-            #collection h2 {
-                font-size: 20px;
-                margin-bottom: 15px;
-            }
-            .fish-grid {
-                grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
-                gap: 10px;
-                margin-bottom: 15px;
-            }
-            .fish-card {
-                padding: 10px;
-            }
-            .fish-card img {
-                width: 100px;
-                height: auto;
-            }
-            .fish-card h3 {
-                font-size: 14px;
-                margin: 3px 0;
-            }
-            .fish-card p {
-                font-size: 12px;
-                margin: 3px 0;
-            }
-            .record {
-                padding: 10px;
-                margin-bottom: 15px;
-            }
-            .record h3 {
-                font-size: 16px;
-            }
-            .record p {
-                font-size: 12px;
-                margin: 3px 0;
-            }
-            .record img {
-                width: 100px;
-                height: auto;
-            }
-            .close-btn {
-                font-size: 20px;
-                top: 5px;
-                right: 5px;
-            }
-            #fishShop {
-                padding: 15px;
-                width: 90%;
-            }
-            .shop-grid {
-                grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
-                gap: 10px;
-            }
-            .shop-item img {
-                width: 80px;
-            }
-            .shop-button {
-                padding: 8px 15px;
-                font-size: 14px;
-            }
-        }
-        @media (max-width: 480px) {
-            #collection {
-                padding: 10px;
-                width: 95%;
-            }
-            .fish-grid {
-                grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
-                gap: 8px;
-            }
-            .fish-card img {
-                width: 80px;
-                height: auto;
-            }
-            .fish-card h3 {
-                font-size: 13px;
-            }
-            .fish-card p {
-                font-size: 11px;
-            }
-        }
-        
-        /* Add styles for the upgrade shop */
-        #upgradeShop {
-            display: none;
-            position: fixed;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            background: rgba(0, 0, 0, 0.9);
-            color: white;
-            padding: 30px;
-            border-radius: 15px;
-            font-family: Arial, sans-serif;
-            width: 80%;
-            max-height: 80vh;
-            overflow-y: auto;
-        }
-        #upgradeShop h2 {
-            text-align: center;
-            color: #ffd700;
-            margin-bottom: 20px;
-            font-size: 24px;
-        }
-        .upgrade-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
-            gap: 20px;
-            margin-bottom: 20px;
-        }
-        .upgrade-item {
-            background: rgba(255, 255, 255, 0.1);
-            padding: 20px;
-            border-radius: 10px;
-            text-align: center;
-        }
-        .upgrade-item h3 {
-            color: #00ffff;
-            margin: 10px 0;
-        }
-        .upgrade-item p {
-            margin: 10px 0;
-            font-size: 14px;
-        }
-        .upgrade-item .price {
-            color: #ffd700;
-            font-weight: bold;
-            font-size: 18px;
-            margin: 15px 0;
-        }
-        .upgrade-item button {
-            background: #4a6d8c;
-            color: white;
-            border: none;
-            padding: 10px 20px;
-            border-radius: 5px;
-            cursor: pointer;
-            font-size: 16px;
-            width: 100%;
-        }
-        .upgrade-item button:hover {
-            background: #5d8baf;
-        }
-        .upgrade-item button:disabled {
-            background: #2c4152;
-            cursor: not-allowed;
-        }
-        .upgrade-item.owned {
-            background: rgba(0, 255, 0, 0.1);
-        }
-        .upgrade-item.owned button {
-            background: #2c4152;
-            cursor: not-allowed;
-        }
-        /* Add styles for the tabbed shop interface */
-        .shop-tabs {
-            display: flex;
-            justify-content: center;
-            margin-bottom: 20px;
-            border-bottom: 2px solid #4a6d8c;
-        }
-        .shop-tab {
-            background: none;
-            border: none;
-            color: #ffffff;
-            padding: 10px 20px;
-            margin: 0 10px;
-            font-size: 18px;
-            cursor: pointer;
-            opacity: 0.7;
-            transition: all 0.3s ease;
-        }
-        .shop-tab.active {
-            opacity: 1;
-            border-bottom: 3px solid #00ffff;
-            color: #00ffff;
-        }
-        .shop-tab:hover {
-            opacity: 1;
-        }
-        .shop-content {
-            display: none;
-        }
-        .shop-content.active {
-            display: block;
-        }
-        .mobile-button-group {
-            position: fixed;
-            bottom: 30px;
-            left: 50%;
-            transform: translateX(-50%);
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            gap: 20px;
-            z-index: 1000;
-            width: auto;
-            padding: 0 10px;
-            pointer-events: auto;
-        }
-        /* Add styles for collection tabs */
-        .collection-tabs {
-            display: flex;
-            justify-content: center;
-            margin-bottom: 20px;
-            border-bottom: 2px solid #4a6d8c;
-        }
-        .collection-tab {
-            background: none;
-            border: none;
-            color: #ffffff;
-            padding: 10px 20px;
-            margin: 0 10px;
-            font-size: 18px;
-            cursor: pointer;
-            opacity: 0.7;
-            transition: all 0.3s ease;
-        }
-        .collection-tab.active {
-            opacity: 1;
-            border-bottom: 3px solid #00ffff;
-            color: #00ffff;
-        }
-        .collection-tab:hover {
-            opacity: 1;
-        }
-        .collection-content {
-            display: none;
-        }
-        .collection-content.active {
-            display: block;
-        }
-        .inventory-item {
-            background: rgba(255, 255, 255, 0.1);
-            padding: 12px;
-            border-radius: 8px;
-            margin-bottom: 10px;
-            width: calc(33.33% - 10px);
-            display: inline-block;
-            margin-right: 10px;
-            vertical-align: top;
-            box-sizing: border-box;
-        }
-        .inventory-item h3 {
-            color: #00ffff;
-            margin: 3px 0;
-            font-size: 16px;
-        }
-        .inventory-item p {
-            margin: 3px 0;
-            color: #ffffff;
-            font-size: 13px;
-        }
-        .inventory-item.owned {
-            background: rgba(0, 255, 0, 0.1);
-            border: 1px solid rgba(0, 255, 0, 0.3);
-        }
-        .inventory-section {
-            margin-bottom: 30px;
-        }
-        .inventory-section h2 {
-            color: #00ffff;
-            margin-bottom: 15px;
-            font-size: 20px;
-            text-align: center;
-        }
-        .fish-inventory-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-            gap: 15px;
-        }
-        .fish-inventory-item {
-            background: rgba(255, 255, 255, 0.1);
-            padding: 15px;
-            border-radius: 10px;
-            text-align: center;
-        }
-        .fish-inventory-item img {
-            width: 100px;
-            height: auto;
-            margin-bottom: 10px;
-        }
-        .fish-inventory-item h3 {
-            color: #00ffff;
-            margin: 5px 0;
-        }
-        .fish-inventory-item p {
-            margin: 5px 0;
-            color: #ffffff;
-            font-size: 14px;
-        }
-
-        /* Add after other styles */
-        #questMenu {
-            display: none;
-            position: fixed;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            background: rgba(0, 0, 0, 0.9);
-            padding: 20px;
-            border-radius: 10px;
-            border: 2px solid #4a90e2;
-            color: white;
-            z-index: 1000;
-            width: 80%;
-            max-width: 600px;
-            max-height: 80vh;
-            overflow-y: auto;
-        }
-
-        #questMenu h2 {
-            color: #4a90e2;
-            text-align: center;
-            margin-bottom: 20px;
-            font-size: 24px;
-        }
-
-        .quest-content {
-            padding: 15px;
-        }
-
-        .close-quest {
-            position: absolute;
-            top: 10px;
-            right: 10px;
-            background: none;
-            border: none;
-            color: white;
-            font-size: 24px;
-            cursor: pointer;
-        }
-
-        .close-quest:hover {
-            color: #4a90e2;
-        }
-
-        #questPrompt {
-            display: none;
-            position: fixed;
-            bottom: 20%;
-            left: 50%;
-            transform: translateX(-50%);
-            background: rgba(0, 0, 0, 0.7);
-            color: white;
-            padding: 10px 20px;
-            border-radius: 5px;
-            z-index: 1000;
-        }
-        
-        /* Add after other styles */
-        .quest-item {
-            background: rgba(74, 144, 226, 0.1);
-            border: 1px solid #4a90e2;
-            border-radius: 8px;
-            padding: 15px;
-            margin-bottom: 20px;
-        }
-        
-        .quest-item h3 {
-            color: #4a90e2;
-            margin-top: 0;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.2);
-            padding-bottom: 10px;
-        }
-        
-        .quest-description {
-            font-style: italic;
-            color: #ccc;
-            line-height: 1.5;
-            margin-bottom: 15px;
-        }
-        
-        .quest-requirements h4, .quest-reward h4 {
-            color: #ffcc00;
-            margin-bottom: 5px;
-        }
-        
-        .quest-requirements ul {
-            list-style-type: none;
-            padding-left: 10px;
-        }
-        
-        .quest-requirements li {
-            margin-bottom: 5px;
-            display: flex;
-            align-items: center;
-        }
-        
-        .quest-requirements li.completed {
-            color: #4caf50;
-        }
-        
-        .quest-requirements li.missing {
-            color: #ff6b6b;
-        }
-        
-        .quest-button {
-            background: #4a90e2;
-            color: white;
-            border: none;
-            padding: 8px 15px;
-            border-radius: 4px;
-            cursor: pointer;
-            margin-top: 10px;
-            font-weight: bold;
-            transition: background 0.3s;
-        }
-        
-        .quest-button:hover {
-            background: #3a7bc8;
-        }
-        
-        .quest-button:disabled {
-            background: #555;
-            cursor: not-allowed;
-        }
-        
-        #questPrompt {
-            font-family: 'Courier New', monospace;
-            font-style: italic;
-        }
-    </style>
+    <link rel="stylesheet" href="styles.css">
 </head>
 <body>
     <div id="fishCaught">
@@ -874,13 +68,12 @@
             <div id="turnJoystick" class="joystick"></div>
         </div>
         <div class="mobile-button-group">
-            <button class="mobileButton" id="fishButton">🎣</button>
-            <button class="mobileButton" id="shopButton">🏪</button>
-            <button class="mobileButton" id="collectionButton">📱</button>
+            <button class="mobileButton" id="fishButton"></button>
+            <button class="mobileButton" id="shopButton"></button>
+            <button class="mobileButton" id="collectionButton"></button>
         </div>
     </div>
     <div id="questPrompt">Press E to talk</div>
-    
     <div id="questMenu">
         <button class="close-quest">&times;</button>
         <h2>Old Fisherman's Quests</h2>
@@ -905,7 +98,7 @@
             </div>
         </div>
     </div>
-
+    
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
     <script>
@@ -927,14 +120,14 @@
                 document.getElementsByTagName('head')[0].appendChild(viewport);
             }
         }
-
+    
         // Set up scene, camera, and renderer
         const scene = new THREE.Scene();
         const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 4000);
         const renderer = new THREE.WebGLRenderer();
         renderer.setSize(window.innerWidth, window.innerHeight);
         document.body.appendChild(renderer.domElement);
-
+    
         // Add skybox
         const skyboxLoader = new THREE.CubeTextureLoader();
         const skyboxMaterials = [
@@ -945,14 +138,14 @@
             new THREE.MeshBasicMaterial({ color: 0x87CEEB, side: THREE.BackSide }), // front - light blue
             new THREE.MeshBasicMaterial({ color: 0x87CEEB, side: THREE.BackSide })  // back - light blue
         ];
-
+    
         const skyboxGeometry = new THREE.BoxGeometry(3600, 3600, 3600);
         const skybox = new THREE.Mesh(skyboxGeometry, skyboxMaterials);
         scene.add(skybox);
         
         // Remove the old skybox background
         scene.background = new THREE.Color(0x87CEEB);
-
+    
         // Add OrbitControls with modified settings
         const controls = new THREE.OrbitControls(camera, renderer.domElement);
         controls.enableDamping = true;
@@ -969,17 +162,17 @@
             ONE: THREE.TOUCH.ROTATE,
             TWO: THREE.TOUCH.DOLLY_ROTATE
         };
-
+    
         // Variables for camera control
         let currentCameraDistance = 15; // Reduced from 25
         let lastBoatPosition = new THREE.Vector3();
-
+    
         // Add zoom change listener
         controls.addEventListener('change', () => {
             // Update stored camera distance when user zooms
             currentCameraDistance = camera.position.distanceTo(controls.target);
         });
-
+    
         // Create lake with reflective water
         const lakeGeometry = new THREE.PlaneGeometry(3600, 3600, 180, 180);
         
@@ -1002,12 +195,12 @@
             ior: 1.33, // Water's index of refraction
             side: THREE.FrontSide
         });
-
+    
         const lake = new THREE.Mesh(lakeGeometry, waterMaterial);
         lake.rotation.x = -Math.PI / 2;
         lake.position.y = 0; // Raised to match the bottom of the boat
         scene.add(lake);
-
+    
         // Add ocean floor to prevent seeing through water
         const oceanFloorGeometry = new THREE.PlaneGeometry(900, 900);
         const oceanFloorMaterial = new THREE.MeshPhongMaterial({
@@ -1019,7 +212,7 @@
         oceanFloor.rotation.x = -Math.PI / 2; // Same orientation as water
         oceanFloor.position.y = -5; // Position below water
         scene.add(oceanFloor);
-
+    
         // Create high-quality environment map for reflections
         const cubeRenderTarget = new THREE.WebGLCubeRenderTarget(1024, {
             generateMipmaps: true,
@@ -1028,11 +221,11 @@
         const cubeCamera = new THREE.CubeCamera(0.1, 1000, cubeRenderTarget);
         scene.add(cubeCamera);
         waterMaterial.envMap = cubeRenderTarget.texture;
-
+    
         // Add dynamic wave displacement
         let waterVertices = null;
         let waterVerticesInitial = null;
-
+    
         // Store initial vertex positions for wave animation
         function initWaterVertices() {
             if (!waterVertices) {
@@ -1046,7 +239,7 @@
                 }
             }
         }
-
+    
         // Animation function for water with enhanced wave movement
         function animateWater(time) {
             initWaterVertices();
@@ -1094,7 +287,7 @@
             cubeCamera.update(renderer, scene);
             lake.visible = true;
         }
-
+    
         // Create islands
         function createIsland(x, z, size, height, complexity) {
             const island = new THREE.Group();
@@ -1184,7 +377,7 @@
             island.position.set(x, 0, z);
             return island;
         }
-
+    
         // Add four unique islands with natural archipelago layout
         const islands = [
             // Starting island (close to spawn)
@@ -1198,7 +391,7 @@
             
             // Large island to the west
             createIsland(-160, -100, 30, 5, 20),  // Original western island
-
+    
             // Original distant islands
             createIsland(300, 300, 35, 6, 24),    // Large northeastern island
             createIsland(-280, 320, 28, 5, 18),   // Northern archipelago
@@ -1206,7 +399,7 @@
             createIsland(400, -200, 25, 4, 16),   // Far eastern island
             createIsland(200, -350, 30, 5, 18),   // Southern island
             createIsland(-200, -400, 22, 4, 14),  // Southwestern island
-
+    
             // New islands in expanded area
             createIsland(600, 600, 45, 7, 28),    // Massive northeastern island
             createIsland(-700, 500, 38, 6, 22),   // Large northern island
@@ -1219,7 +412,7 @@
             createIsland(200, 800, 30, 5, 18),    // Far northern island
             createIsland(-700, -500, 36, 5, 20)   // Southwestern deep water island
         ];
-
+    
         // Create a dock with fishing house
         function createDock(startX, startZ, angle) {
             const dock = new THREE.Group();
@@ -1232,14 +425,14 @@
                 color: 0x8B4513,
                 flatShading: true
             });
-
+    
             // Add planks
             for (let i = 0; i < dockLength; i += 2) {
                 const plank = new THREE.Mesh(plankGeometry, woodMaterial);
                 plank.position.set(0, 0.2, i);
                 dock.add(plank);
             }
-
+    
             // Add support beams
             const supportGeometry = new THREE.CylinderGeometry(0.2, 0.2, 2, 8);
             for (let i = 2; i < dockLength; i += 6) {
@@ -1250,7 +443,7 @@
                 dock.add(leftSupport);
                 dock.add(rightSupport);
             }
-
+    
             // Create fishing house
             const house = new THREE.Group();
             
@@ -1262,7 +455,7 @@
             const base = new THREE.Mesh(baseGeometry, houseMaterial);
             base.position.y = 2;
             house.add(base);
-
+    
             // Roof
             const roofGeometry = new THREE.ConeGeometry(6, 4, 4);
             const roofMaterial = new THREE.MeshPhongMaterial({
@@ -1272,7 +465,7 @@
             roof.position.y = 5;
             roof.rotation.y = Math.PI / 4;
             house.add(roof);
-
+    
             // Window
             const windowGeometry = new THREE.PlaneGeometry(1.5, 1.5);
             const windowMaterial = new THREE.MeshPhongMaterial({
@@ -1285,7 +478,7 @@
             window1.position.set(4.01, 2, 0);
             window1.rotation.y = Math.PI / 2;
             house.add(window1);
-
+    
             // Door
             const doorGeometry = new THREE.PlaneGeometry(2, 3);
             const doorMaterial = new THREE.MeshPhongMaterial({
@@ -1295,18 +488,18 @@
             const door = new THREE.Mesh(doorGeometry, doorMaterial);
             door.position.set(0, 1.5, 4.01);
             house.add(door);
-
+    
             // Position house at the end of dock
             house.position.z = dockLength - 4;
             dock.add(house);
-
+    
             // Position and rotate entire dock
             dock.position.set(startX, 0, startZ);
             dock.rotation.y = angle;
-
+    
             return dock;
         }
-
+    
         // Add dock to the starting island
         const startingIsland = islands[0];
         const dockAngle = -3 * Math.PI / 4; // Changed to opposite side (-135 degrees)
@@ -1323,7 +516,7 @@
             dockAngle
         );
         scene.add(dock);
-
+    
         // Create irregular shallow water zones around islands
         function createUnderwaterTerrain(x, z, size) {
             const segments = 64;
@@ -1339,7 +532,7 @@
                 );
                 points.push(new THREE.Vector2(Math.cos(angle) * radius, Math.sin(angle) * radius));
             }
-
+    
             const shapeGeometry = new THREE.ShapeGeometry(new THREE.Shape(points));
             
             // Updated material settings for turquoise shallow water
@@ -1360,7 +553,7 @@
                 polygonOffsetFactor: -1,
                 polygonOffsetUnits: -4
             });
-
+    
             const shallowWater = new THREE.Mesh(shapeGeometry, shallowMaterial);
             shallowWater.rotation.x = -Math.PI / 2;
             shallowWater.position.set(x, 0.1, z);  // Positioned just above main water
@@ -1368,7 +561,7 @@
             
             scene.add(shallowWater);
         }
-
+    
         // Create deep water zones (darker areas in deep water)
         function createDeepWaterZone(x, z, size) {
             const segments = 64;
@@ -1385,7 +578,7 @@
                 );
                 points.push(new THREE.Vector2(Math.cos(angle) * radius, Math.sin(angle) * radius));
             }
-
+    
             const shapeGeometry = new THREE.ShapeGeometry(new THREE.Shape(points));
             
             // Material settings for dark deep water
@@ -1406,7 +599,7 @@
                 polygonOffsetFactor: -1,
                 polygonOffsetUnits: -3
             });
-
+    
             const deepWater = new THREE.Mesh(shapeGeometry, deepMaterial);
             deepWater.rotation.x = -Math.PI / 2;
             deepWater.position.set(x, 0.15, z);  // Positioned slightly above shallow water
@@ -1420,7 +613,7 @@
             
             scene.add(deepWater);
         }
-
+    
         // Add Golden Fish array after the DEEP_WATER_FISH array
         const GOLDEN_FISH = [
             { 
@@ -1460,7 +653,7 @@
                 baseValue: 500
             }
         ];
-
+    
         // Add golden water zone creation function after createDeepWaterZone function
         function createGoldenWaterZone(x, z, size) {
             const segments = 64;
@@ -1475,7 +668,7 @@
                 );
                 points.push(new THREE.Vector2(Math.cos(angle) * radius, Math.sin(angle) * radius));
             }
-
+    
             const shapeGeometry = new THREE.ShapeGeometry(new THREE.Shape(points));
             
             const goldenMaterial = new THREE.MeshPhongMaterial({
@@ -1495,7 +688,7 @@
                 polygonOffsetFactor: -1,
                 polygonOffsetUnits: -3
             });
-
+    
             const goldenWater = new THREE.Mesh(shapeGeometry, goldenMaterial);
             goldenWater.rotation.x = -Math.PI / 2;
             goldenWater.position.set(x, 0.15, z);
@@ -1509,13 +702,13 @@
             
             scene.add(goldenWater);
         }
-
+    
         // Add golden water zones array with the other zone arrays
         const goldenWaterZones = [];
-
+    
         // Add golden zone location after deepZoneLocations
         const goldenZoneLocation = { x: 1500, z: 1500, size: 80 };  // Even further from starting point
-
+    
         // Store all deep water zones for detection
         const deepWaterZones = [];
         
@@ -1532,19 +725,19 @@
             { x: -500, z: -300, size: 45 },
             { x: 300, z: 900, size: 55 }
         ];
-
+    
         // Add underwater terrain around each island
         islands.forEach(island => {
             const pos = island.position;
             createUnderwaterTerrain(pos.x, pos.z, 35);  // Increased size from 25 to 35
             scene.add(island);
         });
-
+    
         // Add deep water zones
         deepZoneLocations.forEach(zone => {
             createDeepWaterZone(zone.x, zone.z, zone.size);
         });
-
+    
         // Function to check if a point is in shallow water
         function isInShallowWater(x, z) {
             for (const island of islands) {
@@ -1579,7 +772,7 @@
             if (isInGoldenWater(x, z)) return "golden";
             return "ocean"; // Default is ocean (regular deep water)
         }
-
+    
         // Add golden water check function
         function isInGoldenWater(x, z) {
             for (const zone of goldenWaterZones) {
@@ -1592,7 +785,7 @@
             }
             return false;
         }
-
+    
         const OCEAN_FISH = [
             { 
                 name: "Tuna", 
@@ -1713,7 +906,7 @@
                 weightScale: 2.5
             }
         ];
-
+    
         // Add weight generation function
         function generateFishWeight(minWeight, maxWeight, scale) {
             // Generate a random number between 0 and 1
@@ -1726,7 +919,7 @@
             // Round to 1 decimal place
             return Math.round(weight * 10) / 10;
         }
-
+    
         // Create boat class
         class Boat {
             constructor() {
@@ -1754,28 +947,28 @@
                 this.createBoat();
                 this.createWakeSystem();
             }
-
+    
             createBoat() {
         // Boat hull
                 const hullGeometry = new THREE.BoxGeometry(2.5, 1.5, 5);
                 const hullMaterial = new THREE.MeshPhongMaterial({ color: 0x800000 });
         const hull = new THREE.Mesh(hullGeometry, hullMaterial);
                 this.group.add(hull);
-
+    
                 // Boat cabin
                 const cabinGeometry = new THREE.BoxGeometry(2, 1.5, 2);
                 const cabinMaterial = new THREE.MeshPhongMaterial({ color: 0xFFFFFF });
                 const cabin = new THREE.Mesh(cabinGeometry, cabinMaterial);
                 cabin.position.set(0, 1.25, -0.5);
                 this.group.add(cabin);
-
+    
                 // Cabin roof
                 const roofGeometry = new THREE.BoxGeometry(2.2, 0.2, 2.2);
                 const roofMaterial = new THREE.MeshPhongMaterial({ color: 0x2F4F4F });
                 const roof = new THREE.Mesh(roofGeometry, roofMaterial);
                 roof.position.set(0, 2.1, -0.5);
                 this.group.add(roof);
-
+    
                 // Fishing rod holders
                 const poleGeometry = new THREE.CylinderGeometry(0.05, 0.05, 2);
                 const poleMaterial = new THREE.MeshPhongMaterial({ color: 0x8B4513 });
@@ -1783,12 +976,12 @@
                 pole.position.set(0.5, 1.5, 1.5);
                 pole.rotation.z = -Math.PI / 6;
                 this.group.add(pole);
-
+    
                 const pole2 = pole.clone();
                 pole2.position.set(-0.5, 1.5, 1.5);
                 pole2.rotation.z = Math.PI / 6;
                 this.group.add(pole2);
-
+    
                 // Front railing
                 const railingGeometry = new THREE.TorusGeometry(1, 0.03, 8, 12, Math.PI);
                 const railingMaterial = new THREE.MeshPhongMaterial({ color: 0xC0C0C0 });
@@ -1796,7 +989,7 @@
                 railing.position.set(0, 1.2, 2);
                 railing.rotation.y = Math.PI / 2;
                 this.group.add(railing);
-
+    
                 // Create fishing line (initially hidden)
                 const lineGeometry = new THREE.BufferGeometry();
                 const lineMaterial = new THREE.LineBasicMaterial({ color: 0xFFFFFF });
@@ -1808,7 +1001,7 @@
                 this.fishingLine = new THREE.Line(lineGeometry, lineMaterial);
                 this.fishingLine.visible = false;
                 this.group.add(this.fishingLine);
-
+    
                 // Create fishing radius indicator (initially hidden)
                 const radiusGeometry = new THREE.CircleGeometry(4.5, 32);
                 const radiusMaterial = new THREE.MeshBasicMaterial({ 
@@ -1828,7 +1021,7 @@
                 this.fishingRadius.visible = false;
                 this.fishingRadius.renderOrder = 1;
                 this.group.add(this.fishingRadius);
-
+    
                 // Create glow effect for the radius
                 const glowGeometry = new THREE.CircleGeometry(4.8, 32);
                 const glowMaterial = new THREE.MeshBasicMaterial({
@@ -1848,11 +1041,11 @@
                 this.glowRadius.visible = false;
                 this.glowRadius.renderOrder = 2;
                 this.group.add(this.glowRadius);
-
+    
                 this.group.position.y = 1;
                 this.group.rotation.y = -Math.PI / 2;
             }
-
+    
             createWakeSystem() {
                 // Create a container for wake positioned at the back of the boat
                 this.wakeContainer = new THREE.Object3D();
@@ -1926,7 +1119,7 @@
                 this.wakeActive = new Float32Array(wakeParticles);
                 this.nextParticleIndex = 0; // Track which particle to spawn next
             }
-
+    
             updateWake(isMovingForward) {
                 const positions = this.wakePositions;
                 const scales = this.wakeScales;
@@ -1995,7 +1188,7 @@
                 this.wakeSystem.geometry.attributes.scale.needsUpdate = true;
                 this.wakeSystem.geometry.attributes.opacity.needsUpdate = true;
             }
-
+    
             checkCollision(newPosition) {
                 // Check collision with each island
                 for (const island of islands) {
@@ -2016,7 +1209,7 @@
                 }
                 return false; // No collision
             }
-
+    
             moveForward() {
                 if (!this.isFishing) {
                     const direction = new THREE.Vector3(0, 0, -1);
@@ -2033,7 +1226,7 @@
                     }
                 }
             }
-
+    
             moveBackward() {
                 if (!this.isFishing) {
                     const direction = new THREE.Vector3(0, 0, 1);
@@ -2050,19 +1243,19 @@
                     }
                 }
             }
-
+    
             turnLeft() {
                 if (!this.isFishing) {
                     this.group.rotation.y += this.rotationSpeed;
                 }
             }
-
+    
             turnRight() {
                 if (!this.isFishing) {
                     this.group.rotation.y -= this.rotationSpeed;
                 }
             }
-
+    
             toggleFishing() {
                 this.isFishing = !this.isFishing;
                 this.fishingLine.visible = this.isFishing;
@@ -2076,7 +1269,7 @@
                     setTimeout(() => {
                         this.canCatchFish = true;
                     }, 5000);
-
+    
                     const linePositions = this.fishingLine.geometry.attributes.position.array;
                     linePositions[4] = 0;
                     this.fishingLine.geometry.attributes.position.needsUpdate = true;
@@ -2084,20 +1277,20 @@
                     document.getElementById('fishCaught').style.display = 'none';
                 }
             }
-
+    
             checkForFish() {
                 if (!this.canCatchFish || !this.isFishing) return;
-
+    
                 const timeSpentFishing = (Date.now() - this.fishingStartTime) / 1000; // Convert to seconds
                 const baseProbability = 0.02; // 2% base chance per check (reduced from 10%)
                 const timeBonus = Math.min(0.08, timeSpentFishing * 0.002); // Max 8% bonus, slower increase
                 const catchChance = baseProbability + timeBonus;
-
+    
                 if (Math.random() < catchChance) {
                     this.catchFish();
                 }
             }
-
+    
             catchFish() {
                 // Determine water type at boat position
                 const waterType = getWaterType(this.group.position.x, this.group.position.z);
@@ -2107,7 +1300,7 @@
                     const fishCaughtDiv = document.getElementById('fishCaught');
                     const fishImage = document.getElementById('fishImage');
                     const fishName = document.getElementById('fishName');
-
+    
                     fishImage.src = '';
                     fishName.textContent = "You need a Deep Sea Fishing Rod to fish here!\nVisit the shop at the fishing house to purchase one.";
                     fishCaughtDiv.style.display = 'block';
@@ -2121,7 +1314,7 @@
                     const fishCaughtDiv = document.getElementById('fishCaught');
                     const fishImage = document.getElementById('fishImage');
                     const fishName = document.getElementById('fishName');
-
+    
                     fishImage.src = '';
                     fishName.textContent = "You need a Golden Fishing Rod to fish here!\nYou must first own the Deep Sea Fishing Rod before you can purchase the Golden Rod.";
                     fishCaughtDiv.style.display = 'block';
@@ -2159,7 +1352,7 @@
                 const totalProbability = availableFish.reduce((sum, fish) => sum + fish.rarity, 0);
                 let cumulativeProbability = 0;
                 let caughtFish = null;
-
+    
                 // Normalize probabilities and select fish
                 for (const fish of availableFish) {
                     cumulativeProbability += fish.rarity / totalProbability;
@@ -2167,18 +1360,18 @@
                         caughtFish = fish;
                     }
                 }
-
+    
                 // Fallback to first fish if somehow none was selected
                 if (!caughtFish) {
                     caughtFish = availableFish[0];
                 }
-
+    
                 const weight = generateFishWeight(
                     caughtFish.minWeight,
                     caughtFish.maxWeight,
                     caughtFish.weightScale
                 );
-
+    
                 // Update collection with water type tracking
                 const collectionKey = `${caughtFish.name}_${waterType}`;
                 if (!this.collection[collectionKey]) {
@@ -2198,7 +1391,7 @@
                     this.collection[collectionKey].heaviest,
                     weight
                 );
-
+    
                 // Update records
                 if (!this.records.heaviest || weight > this.records.heaviest.weight) {
                     this.records.heaviest = {
@@ -2208,19 +1401,19 @@
                         waterType: waterType
                     };
                 }
-
+    
                 // Display the caught fish
                 const fishCaughtDiv = document.getElementById('fishCaught');
                 const fishImage = document.getElementById('fishImage');
                 const fishName = document.getElementById('fishName');
-
+    
                 fishImage.src = caughtFish.image;
                 fishName.textContent = `You caught a ${caughtFish.name}!\nWeight: ${weight} lbs\nCaught in: ${waterName}`;
                 fishCaughtDiv.style.display = 'block';
-
+    
                 this.canCatchFish = false;
             }
-
+    
             showCollection() {
                 const collection = document.getElementById('collection');
                 const fishGrid = document.getElementById('fishGrid');
@@ -2231,7 +1424,7 @@
                 fishGrid.innerHTML = '';
                 inventoryGrid.innerHTML = '';
                 fishInventoryGrid.innerHTML = '';
-
+    
                 // Function to create a fish section for a specific water type
                 const createFishSection = (fishArray, title, color) => {
                     const section = document.createElement('div');
@@ -2249,7 +1442,7 @@
                     
                     fishGrid.appendChild(section);
                 };
-
+    
                 // Function to create a fish card (either populated or blank)
                 const createFishCard = (fish, data) => {
                     const card = document.createElement('div');
@@ -2273,13 +1466,13 @@
                     }
                     return card;
                 };
-
+    
                 // Create sections for each water type
                 createFishSection(OCEAN_FISH, "Ocean", "#0077be");
                 createFishSection(SHALLOW_WATER_FISH, "Shallow", "#00ffff");
                 createFishSection(DEEP_WATER_FISH, "Deep", "#000066");
                 createFishSection(GOLDEN_FISH, "Golden", "#FFD700");
-
+    
                 // Add inventory items (equipment)
                 const upgrades = [
                     {
@@ -2307,7 +1500,7 @@
                         effect: 'Helps navigate to distant waters'
                     }
                 ];
-
+    
                 upgrades.forEach(upgrade => {
                     const owned = this.ownedItems.has(upgrade.id);
                     if (owned || upgrade.id === 'compass') { // Always show compass slot
@@ -2322,7 +1515,7 @@
                         inventoryGrid.appendChild(item);
                     }
                 });
-
+    
                 // Add caught fish to fish inventory section
                 let hasFish = false;
                 for (const [key, data] of Object.entries(this.collection)) {
@@ -2344,7 +1537,7 @@
                         fishInventoryGrid.appendChild(fishItem);
                     }
                 }
-
+    
                 if (!hasFish) {
                     const emptyMessage = document.createElement('p');
                     emptyMessage.textContent = "You haven't caught any fish yet. Go fishing!";
@@ -2352,10 +1545,10 @@
                     emptyMessage.style.gridColumn = "1 / -1";
                     fishInventoryGrid.appendChild(emptyMessage);
                 }
-
+    
                 collection.style.display = 'block';
             }
-
+    
             showFishShop() {
                 const fishShop = document.getElementById('fishShop');
                 const shopGrid = document.getElementById('shopGrid');
@@ -2368,7 +1561,7 @@
                 upgradeGrid.innerHTML = '';
                 shopNotification.textContent = '';
                 shopMoney.textContent = this.money;
-
+    
                 // Add shop items for each type of fish in collection
                 for (const [key, data] of Object.entries(this.collection)) {
                     if (data.count > 0) {
@@ -2421,12 +1614,12 @@
                         shopGrid.appendChild(item);
                     }
                 }
-
+    
                 // If no fish to sell
                 if (shopGrid.children.length === 0) {
                     shopGrid.innerHTML = '<p style="text-align:center;grid-column:1/-1;">You have no fish to sell. Go fishing first!</p>';
                 }
-
+    
                 // Add upgrade items
                 const upgrades = [
                     {
@@ -2477,10 +1670,10 @@
                     
                     upgradeGrid.appendChild(item);
                 });
-
+    
                 fishShop.style.display = 'block';
             }
-
+    
             sellFish(fishKey) {
                 if (!this.collection[fishKey] || this.collection[fishKey].count === 0) {
                     return;
@@ -2529,7 +1722,7 @@
                 // Update shop
                 this.showFishShop();
             }
-
+    
             sellAllFish() {
                 let totalSold = 0;
                 let totalValue = 0;
@@ -2577,7 +1770,7 @@
                     this.showFishShop();
                 }
             }
-
+    
             checkProximityToShop() {
                 // Calculate fishing house position in world coordinates
                 const dockWorldPos = new THREE.Vector3();
@@ -2622,7 +1815,7 @@
                         }
                     }, 3000);
                 }
-
+    
                 // Update shop button visibility for mobile
                 if (isMobile) {
                     const shopButton = document.getElementById('shopButton');
@@ -2632,27 +1825,27 @@
                     }
                 }
             }
-
+    
             update(time) {
                 // Bob up and down
                 this.group.position.y = 1 + Math.sin(time) * 0.2;
-
+    
                 // Update wake system even when not moving (for fade out)
                 if (!keys.w) {
                     this.updateWake(false);
                 }
-
+    
                 // Animate fishing line and check for fish
                 if (this.isFishing) {
                     const linePositions = this.fishingLine.geometry.attributes.position.array;
                     // Reduced bobbing amplitude from 0.1 to 0.05
                     linePositions[4] = 0.2 + Math.sin(time * 2) * 0.05;
                     this.fishingLine.geometry.attributes.position.needsUpdate = true;
-
+    
                     // Reduced glow effect amplitude
                     this.glowRadius.material.opacity = 0.15 + Math.sin(time * 3) * 0.05;  // Reduced from 0.2 + sin * 0.1
                     this.fishingRadius.material.opacity = 0.4 + Math.sin(time * 3) * 0.1;  // Reduced from 0.5 + sin * 0.2
-
+    
                     // Check for fish every update
                     this.checkForFish();
                 }
@@ -2660,7 +1853,7 @@
                 // Check if near fishing house
                 this.checkProximityToShop();
             }
-
+    
             // Add method to show upgrade shop
             showUpgradeShop() {
                 const upgradeShop = document.getElementById('upgradeShop');
@@ -2761,7 +1954,7 @@
                     this.showFishShop();
                 }
             }
-
+    
             // Add after other methods
             checkNPCDistance() {
                 const npcDistance = Math.sqrt(
@@ -2785,18 +1978,18 @@
                     }
                 }
             }
-
+    
             handleQuestKey = (e) => {
                 if (e.key.toLowerCase() === 'e' && this.nearNPC) {
                     this.showQuestMenu();
                 }
             }
-
+    
             showQuestMenu() {
                 document.getElementById('questMenu').style.display = 'block';
                 this.updateQuestStatus(); // Update quest status when opening menu
             }
-
+    
             // Add to the Boat class
             completeShallowFishQuest() {
                 if (this.completedQuests.has('shallowFishQuest')) {
@@ -2860,7 +2053,7 @@
                 completeButton.textContent = 'Completed';
                 completeButton.disabled = true;
             }
-
+    
             updateQuestStatus() {
                 // Update shallow fish quest status
                 const shallowFishList = document.getElementById('shallowFishList');
@@ -2904,26 +2097,26 @@
                 }
             }
         }
-
+    
         // Create boat instance
         const boat = new Boat();
         scene.add(boat.group);
-
+    
         // Add lighting
         const ambientLight = new THREE.AmbientLight(0xffffff, 0.7);
         scene.add(ambientLight);
-
+    
         const directionalLight = new THREE.DirectionalLight(0xffffff, 0.4);
         directionalLight.position.set(50, 50, 50);
         scene.add(directionalLight);
-
+    
         // Add fog for softer atmosphere
         scene.fog = new THREE.Fog(0x87CEEB, 800, 3000);
-
+    
         // Position camera
         camera.position.set(20, 20, 20);
         camera.lookAt(scene.position);
-
+    
         // Update key controls
         const keys = {
             w: false,
@@ -2932,7 +2125,7 @@
             d: false,
             space: false
         };
-
+    
         // Update keyboard controls
         window.addEventListener('keydown', (e) => {
             switch(e.key.toLowerCase()) {
@@ -2954,7 +2147,7 @@
                     break;
             }
         });
-
+    
         window.addEventListener('keyup', (e) => {
             switch(e.key.toLowerCase()) {
                 case 'w': keys.w = false; break;
@@ -2964,14 +2157,14 @@
                 case ' ': keys.space = false; break;
             }
         });
-
+    
         // Animation variables
         let time = 0;
-
+    
         // Animation loop
         function animate() {
             requestAnimationFrame(animate);
-
+    
             // Handle boat movement
             if (keys.w) {
                 boat.moveForward();
@@ -2985,12 +2178,12 @@
             if (keys.d) {
                 boat.turnRight();
             }
-
+    
             // Update boat and water
             time += 0.01;
             boat.update(time);
             animateWater(time * 1000);
-
+    
             // Update camera position while maintaining zoom level
             const boatPosition = boat.group.position.clone();
             
@@ -3019,41 +2212,41 @@
             
             // Apply damping to camera movement
             controls.update();
-
+    
             renderer.render(scene, camera);
-
+    
             // Check NPC distance
             boat.checkNPCDistance();
         }
-
+    
         // Handle window resizing
         window.addEventListener('resize', onWindowResize, false);
-
+    
         function onWindowResize() {
             camera.aspect = window.innerWidth / window.innerHeight;
             camera.updateProjectionMatrix();
             renderer.setSize(window.innerWidth, window.innerHeight);
         }
-
+    
         animate();
-
+    
         // Add event listeners for collection UI
         document.querySelector('.close-btn').addEventListener('click', () => {
             document.getElementById('collection').style.display = 'none';
         });
-
+    
         // Add event listeners for shop UI
         document.querySelectorAll('.close-btn, .close-shop').forEach(btn => {
             btn.addEventListener('click', () => {
                 document.getElementById('fishShop').style.display = 'none';
             });
         });
-
+    
         // Add sell all button handler
         document.getElementById('sellAll').addEventListener('click', () => {
             boat.sellAllFish();
         });
-
+    
         // Function to toggle collection visibility
         function toggleCollection() {
             const collection = document.getElementById('collection');
@@ -3063,7 +2256,7 @@
                 boat.showCollection();
             }
         }
-
+    
         // Add Tab key handler for toggling collection
         window.addEventListener('keydown', (e) => {
             if (e.key === 'Tab') {
@@ -3071,7 +2264,7 @@
                 toggleCollection();
             }
         });
-
+    
         // Add mobile touch controls
         let moveJoystickActive = false;
         let turnJoystickActive = false;
@@ -3085,7 +2278,7 @@
         const turnJoystick = document.getElementById('turnJoystick');
         const fishButton = document.getElementById('fishButton');
         const collectionButton = document.getElementById('collectionButton');
-
+    
         function handleJoystickStart(e, isMove) {
             e.preventDefault();
             e.stopPropagation();
@@ -3119,7 +2312,7 @@
                 keys.a = keys.d = false;
             }
         }
-
+    
         // Track the last time we updated joystick positions to throttle updates
         let lastJoystickUpdate = 0;
         
@@ -3147,7 +2340,7 @@
                 }
             }
         }
-
+    
         function handleJoystickEnd(e, isMove) {
             e.preventDefault();
             e.stopPropagation();
@@ -3187,7 +2380,7 @@
                 }
             }
         }
-
+    
         function updateJoystickPosition(x, y, isMove) {
             const center = isMove ? moveJoystickCenter : turnJoystickCenter;
             const joystick = isMove ? moveJoystick : turnJoystick;
@@ -3230,7 +2423,7 @@
                 }
             }
         }
-
+    
         // Initialize mobile controls
         if (isMobile) {
             console.log("Mobile device detected, initializing mobile controls");
@@ -3261,14 +2454,14 @@
                         action();
                     }
                 }, { passive: false });
-
+    
                 button.addEventListener('touchend', (e) => {
                     e.preventDefault();
                     e.stopPropagation();
                     isActive = false;
                     button.classList.remove('mobile-active');
                 });
-
+    
                 button.addEventListener('touchcancel', (e) => {
                     e.preventDefault();
                     e.stopPropagation();
@@ -3276,17 +2469,17 @@
                     button.classList.remove('mobile-active');
                 });
             }
-
+    
             // Set up fishing button
             handleButtonTouch(fishButton, () => {
                 boat.toggleFishing();
             });
-
+    
             // Set up collection button
             handleButtonTouch(collectionButton, () => {
                 toggleCollection();
             });
-
+    
             // Set up shop button
             const shopButton = document.getElementById('shopButton');
             handleButtonTouch(shopButton, () => {
@@ -3305,28 +2498,28 @@
                     e.preventDefault();
                 }
             }, { passive: false });
-
+    
             // Allow zooming on the canvas with two fingers
             renderer.domElement.addEventListener('touchmove', (e) => {
                 if (e.touches.length === 2) {
                     e.stopPropagation();
                 }
             }, { passive: true });
-
+    
             // Update fishing popup text for mobile
             const fishingText = document.querySelector('#fishCaught p:last-child');
             fishingText.textContent = 'Tap fishing button to continue';
         }
-
+    
         animate();
-
+    
         // Add event listeners for upgrade shop UI
         document.querySelectorAll('#fishShop .close-btn, #fishShop .close-shop').forEach(btn => {
             btn.addEventListener('click', () => {
                 document.getElementById('fishShop').style.display = 'none';
             });
         });
-
+    
         // Add tab switching functionality
         document.querySelectorAll('.shop-tab').forEach(tab => {
             tab.addEventListener('click', () => {
@@ -3339,7 +2532,7 @@
                 document.getElementById(tab.dataset.tab + 'Content').classList.add('active');
             });
         });
-
+    
         // Add tab switching functionality for collection
         document.querySelectorAll('.collection-tab').forEach(tab => {
             tab.addEventListener('click', () => {
@@ -3352,10 +2545,10 @@
                 document.getElementById(tab.dataset.tab + 'Content').classList.add('active');
             });
         });
-
+    
         // Add golden zone creation after other zone creations
         createGoldenWaterZone(goldenZoneLocation.x, goldenZoneLocation.z, goldenZoneLocation.size);
-
+    
         // Create NPC Boat
         function createNPCBoat(x, z) {
             const npcBoat = new THREE.Group();
@@ -3366,21 +2559,21 @@
             const hull = new THREE.Mesh(hullGeometry, hullMaterial);
             hull.position.y = 1;
             npcBoat.add(hull);
-
+    
             // Cabin
             const cabinGeometry = new THREE.BoxGeometry(6, 4, 6);
             const cabinMaterial = new THREE.MeshPhongMaterial({ color: 0xCD853F }); // Lighter brown
             const cabin = new THREE.Mesh(cabinGeometry, cabinMaterial);
             cabin.position.set(0, 4, -2);
             npcBoat.add(cabin);
-
+    
             // Mast
             const mastGeometry = new THREE.CylinderGeometry(0.3, 0.3, 12);
             const mastMaterial = new THREE.MeshPhongMaterial({ color: 0x8B4513 });
             const mast = new THREE.Mesh(mastGeometry, mastMaterial);
             mast.position.set(0, 8, 2);
             npcBoat.add(mast);
-
+    
             // Sail
             const sailGeometry = new THREE.PlaneGeometry(6, 8);
             const sailMaterial = new THREE.MeshPhongMaterial({ 
@@ -3391,21 +2584,21 @@
             sail.position.set(2, 8, 2);
             sail.rotation.y = Math.PI / 4;
             npcBoat.add(sail);
-
+    
             // Position the NPC boat
             npcBoat.position.set(x, 0, z);
             npcBoat.rotation.y = Math.PI / 6; // Slight rotation for visual interest
             scene.add(npcBoat);
         }
-
+    
         // Create NPC boat near starting area
         createNPCBoat(-100, -60);
-
+    
         // Add quest menu close functionality after other event listeners
         document.querySelector('.close-quest').addEventListener('click', () => {
             document.getElementById('questMenu').style.display = 'none';
         });
-
+    
         // Add event listener for quest completion after other event listeners
         document.getElementById('completeShallowFishQuest').addEventListener('click', () => {
             boat.completeShallowFishQuest();
@@ -3413,4 +2606,3 @@
     </script>
 </body>
 </html>
-
