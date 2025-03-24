@@ -20,6 +20,7 @@ document.addEventListener('DOMContentLoaded', async function () {
 
   // Set up scene, camera, and renderer
   const scene = new THREE.Scene();
+  setupLighting(scene);
   const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 4000);
   const renderer = new THREE.WebGLRenderer();
   renderer.setSize(window.innerWidth, window.innerHeight);
@@ -1837,14 +1838,6 @@ showUpgradeShop() {
 // Create boat instance
 const boat = new Boat();
   scene.add(boat.group);
-
-// Add lighting
-  const ambientLight = new THREE.AmbientLight(0xffffff, 0.7);
-  scene.add(ambientLight);
-
-  const directionalLight = new THREE.DirectionalLight(0xffffff, 0.4);
-  directionalLight.position.set(50, 50, 50);
-  scene.add(directionalLight);
 
 // Add fog for softer atmosphere
   scene.fog = new THREE.Fog(0x87CEEB, 800, 3000);
