@@ -224,115 +224,8 @@ createIsland(-700, -500, 36, 5, 20)   // Southwestern deep water island
 
     const dock = createDock(dockStartX, dockStartZ, dockAngle, scene);
 
-// Create deep water zones (darker areas in deep water)
-function createDeepWaterZone(x, z, size) {
-const segments = 64;
-const points = [];
-
-// Create a deep water zone with slightly irregular shape
-for (let i = 0; i <= segments; i++) {
-  const angle = (i / segments) * Math.PI * 2;
-  // Make deep zones smaller and more irregular than shallows
-  const radius = size * (1 + 
-      Math.sin(angle * 3) * 0.1 + 
-      Math.cos(angle * 2) * 0.15 + 
-      Math.sin(angle * 5) * 0.05
-  );
-  points.push(new THREE.Vector2(Math.cos(angle) * radius, Math.sin(angle) * radius));
-}
-
-const shapeGeometry = new THREE.ShapeGeometry(new THREE.Shape(points));
-
-// Material settings for dark deep water
-const deepMaterial = new THREE.MeshPhongMaterial({
-  color: 0x001428,  // Very dark blue color
-  transparent: true,
-  opacity: 0.4,
-  side: THREE.DoubleSide,
-  shininess: 30,
-  specular: 0x222222,
-  depthWrite: false,
-  depthTest: true,
-  blending: THREE.CustomBlending,
-  blendEquation: THREE.AddEquation,
-  blendSrc: THREE.SrcAlphaFactor,
-  blendDst: THREE.OneMinusSrcAlphaFactor,
-  polygonOffset: true,
-  polygonOffsetFactor: -1,
-  polygonOffsetUnits: -3
-});
-
-const deepWater = new THREE.Mesh(shapeGeometry, deepMaterial);
-deepWater.rotation.x = -Math.PI / 2;
-deepWater.position.set(x, 0.15, z);  // Positioned slightly above shallow water
-deepWater.renderOrder = 2;
-
-// Add to a global list to check for fishing in deep zones
-deepWaterZones.push({
-  position: new THREE.Vector2(x, z),
-  size: size
-});
-
-scene.add(deepWater);
-}
-
-// Add golden water zone creation function after createDeepWaterZone function
-function createGoldenWaterZone(x, z, size) {
-const segments = 64;
-const points = [];
-
-for (let i = 0; i <= segments; i++) {
-  const angle = (i / segments) * Math.PI * 2;
-  const radius = size * (1 + 
-      Math.sin(angle * 3) * 0.1 + 
-      Math.cos(angle * 2) * 0.15 + 
-      Math.sin(angle * 5) * 0.05
-  );
-  points.push(new THREE.Vector2(Math.cos(angle) * radius, Math.sin(angle) * radius));
-}
-
-const shapeGeometry = new THREE.ShapeGeometry(new THREE.Shape(points));
-
-const goldenMaterial = new THREE.MeshPhongMaterial({
-  color: 0xFFD700,
-  transparent: true,
-  opacity: 0.3,
-  side: THREE.DoubleSide,
-  shininess: 100,
-  specular: 0xFFFFFF,
-  depthWrite: false,
-  depthTest: true,
-  blending: THREE.CustomBlending,
-  blendEquation: THREE.AddEquation,
-  blendSrc: THREE.SrcAlphaFactor,
-  blendDst: THREE.OneMinusSrcAlphaFactor,
-  polygonOffset: true,
-  polygonOffsetFactor: -1,
-  polygonOffsetUnits: -3
-});
-
-const goldenWater = new THREE.Mesh(shapeGeometry, goldenMaterial);
-goldenWater.rotation.x = -Math.PI / 2;
-goldenWater.position.set(x, 0.15, z);
-goldenWater.renderOrder = 2;
-
-// Add to global list for detection
-goldenWaterZones.push({
-  position: new THREE.Vector2(x, z),
-  size: size
-});
-
-scene.add(goldenWater);
-}
-
-// Add golden water zones array with the other zone arrays
-const goldenWaterZones = [];
-
 // Add golden zone location after deepZoneLocations
 const goldenZoneLocation = { x: 1500, z: 1500, size: 80 };  // Even further from starting point
-
-// Store all deep water zones for detection
-const deepWaterZones = [];
 
 // Define deep water zone locations (away from islands)
 const deepZoneLocations = [
@@ -348,65 +241,27 @@ const deepZoneLocations = [
 { x: 300, z: 900, size: 55 }
 ];
 
+WaterZones.init(islands);
+
 // Add underwater terrain around each island
 islands.forEach(island => {
 const pos = island.position;
-createUnderwaterTerrain(scene, pos.x, pos.z, 35);  // Increased size from 25 to 35
+WaterZones.createUnderwaterTerrain(scene, pos.x, pos.z, 35);;  // Increased size from 25 to 35
 scene.add(island);
 });
 
 // Add deep water zones
 deepZoneLocations.forEach(zone => {
-createDeepWaterZone(zone.x, zone.z, zone.size);
+WaterZones.createDeepWaterZone(scene, zone.x, zone.z, zone.size);
 });
-
-// Function to check if a point is in shallow water
-function isInShallowWater(x, z) {
-for (const island of islands) {
-  const dx = x - island.position.x;
-  const dz = z - island.position.z;
-  const distance = Math.sqrt(dx * dx + dz * dz);
-  const shallowRadius = island.scale.x * 35 * 2.2; // Match the shallow water size calculation
-  if (distance <= shallowRadius) {
-      return true;
-  }
-}
-return false;
-}
-
-// Function to check if a point is in deep water zone
-function isInDeepWater(x, z) {
-for (const zone of deepWaterZones) {
-  const dx = x - zone.position.x;
-  const dz = z - zone.position.y;
-  const distance = Math.sqrt(dx * dx + dz * dz);
-  if (distance <= zone.size) {
-      return true;
-  }
-}
-return false;
-}
 
 // Function to determine water type at a point
 function getWaterType(x, z) {
-if (isInShallowWater(x, z)) return "shallow";
-if (isInDeepWater(x, z)) return "deep";
-if (isInGoldenWater(x, z)) return "golden";
+if (WaterZones.isInShallowWater(x, z)) return "shallow";
+if (WaterZones.isInDeepWater(x, z)) return "deep";
+if (WaterZones.isInGoldenWater(x, z)) return "golden";
 return "ocean"; // Default is ocean (regular deep water)
 }
-
-// Add golden water check function
-function isInGoldenWater(x, z) {
-for (const zone of goldenWaterZones) {
-  const dx = x - zone.position.x;
-  const dz = z - zone.position.y;
-  const distance = Math.sqrt(dx * dx + dz * dz);
-  if (distance <= zone.size) {
-      return true;
-  }
-}
-return false;
-  }
 
 // Add weight generation function
   function generateFishWeight(minWeight, maxWeight, scale) {
@@ -2046,7 +1901,7 @@ btn.addEventListener('click', () => {
   });
 
 // Add golden zone creation after other zone creations
-createGoldenWaterZone(goldenZoneLocation.x, goldenZoneLocation.z, goldenZoneLocation.size);
+WaterZones.createGoldenWaterZone(scene, goldenZoneLocation.x, goldenZoneLocation.z, goldenZoneLocation.size);
 
 // Create NPC boat near starting area
 createNPCBoat(-100, -60, scene);
