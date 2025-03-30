@@ -1651,6 +1651,9 @@ const boat = new Boat();
 // Add fog for softer atmosphere
   scene.fog = new THREE.Fog(0x87CEEB, 800, 3000);
 
+// Create Birds (after scene and before starting animation)
+createBirds(scene, 30); // Increased from 15 to 30 birds
+
 // Position camera
   camera.position.set(20, 20, 20);
   camera.lookAt(scene.position);
@@ -1698,10 +1701,12 @@ space: false
 
 // Animation variables
   let time = 0;
+  const clock = new THREE.Clock(); // Add a clock to measure delta time
 
 // Animation loop
   function animate() {
       requestAnimationFrame(animate);
+      const deltaTime = clock.getDelta(); // Get time since last frame
 
 // Handle boat movement
 if (keys.w) {
@@ -1718,9 +1723,10 @@ if (keys.d) {
 }
 
 // Update boat and water
-      time += 0.01;
-      boat.update(time);
-      animateWater(time * 1000);
+      time += deltaTime; // Use deltaTime for smoother time progression
+      boat.update(time); // Pass consistent time if needed by boat later
+      animateWater(time * 1000); // animateWater might use its own time calculation or could be updated
+      updateBirds(time, deltaTime); // Pass time and deltaTime to birds update
 
 // Update camera position while maintaining zoom level
       const boatPosition = boat.group.position.clone();
@@ -1754,7 +1760,7 @@ if (keys.d) {
       renderer.render(scene, camera);
 
 // Check NPC distance
-boat.checkNPCDistance();
+      boat.checkNPCDistance();
   }
 
 // Handle window resizing
