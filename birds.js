@@ -103,7 +103,7 @@ class Bird {
 }
 
 // Function to create multiple birds
-function createBirds(scene, count = 10) {
+function createBirds(scene, count = 50) {
     for (let i = 0; i < count; i++) {
         // Distribute birds around the world
         const startX = (Math.random() - 0.5) * 1000; // Spread over a larger area

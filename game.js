@@ -1462,7 +1462,8 @@ const boat = new Boat();
   scene.fog = new THREE.Fog(0x87CEEB, 800, 3000);
 
 // Create Birds (after scene and before starting animation)
-createBirds(scene, 30); // Increased from 15 to 30 birds
+createBirds(scene, 50); // Increased from 15 to 50 birds
+createClouds(scene, 15); // Reduced from 30 to 15 clouds (they're much bigger now)
 
 // Position camera
   camera.position.set(20, 20, 20);
@@ -1537,6 +1538,7 @@ if (keys.d) {
       boat.update(time); // Pass consistent time if needed by boat later
       animateWater(time * 1000); // animateWater might use its own time calculation or could be updated
       updateBirds(time, deltaTime); // Pass time and deltaTime to birds update
+      updateClouds(deltaTime, camera); // Pass deltaTime to clouds update and camera for frustum culling
 
 // Update camera position while maintaining zoom level
       const boatPosition = boat.group.position.clone();
